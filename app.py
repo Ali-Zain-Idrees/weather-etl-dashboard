@@ -137,8 +137,9 @@ def main():
 
     # Sidebar Configurations
     st.sidebar.header("Pipeline Configurations")
-    api_key = st.sidebar.text_input("OpenWeatherMap API Key", type="password")
-    
+    #api_key = st.sidebar.text_input("OpenWeatherMap API Key", type="password")
+    api_key = "96df70f062038652685b4a200ede92cc"
+
     st.sidebar.markdown("🔍 **Search or Select Cities Below:**")
     selected_cities = st.sidebar.multiselect(
         "Type city name to search (Sorted A to Z):",
