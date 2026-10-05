@@ -108,42 +108,62 @@ def fetch_historical_db_data(db_name="weather_history.db") -> pd.DataFrame:
 def main():
     st.set_page_config(page_title="Pakistan & Global Weather Pipeline", layout="wide")
 
-    # --- ANIMATED BACKGROUND CSS (Clouds & Weather Effects) ---
+    # --- PURE CSS ANIMATED WEATHER BACKGROUND (Moving Clouds) ---
     st.markdown("""
         <style>
         .stApp {
-            background: linear-gradient(to bottom, #0f2027, #203a43, #2c5364);
+            background: linear-gradient(to bottom, #0b131e, #1a2a3a, #203a43);
             color: #ffffff;
         }
-        
-        /* Subtle Weather Overlay Effects */
-        @keyframes move-clouds {
-            0% { background-position: 0 0; }
-            100% { background-position: 1000px 0; }
-        }
-        
-        .animated-weather-bg {
+
+        /* Animated Cloud 1 */
+        .cloud-1 {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
+            top: 8%;
+            left: -200px;
+            width: 200px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 50px;
+            box-shadow: 30px 10px 0 10px rgba(255, 255, 255, 0.12);
+            animation: moveClouds 25s linear infinite;
             z-index: 0;
-            opacity: 0.15;
-            background: url('https://www.transparenttextures.com/patterns/clouds.png') repeat-x;
-            animation: move-clouds 60s linear infinite;
+            pointer-events: none;
+        }
+
+        /* Animated Cloud 2 */
+        .cloud-2 {
+            position: fixed;
+            top: 25%;
+            left: -250px;
+            width: 280px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 60px;
+            box-shadow: 40px 15px 0 15px rgba(255, 255, 255, 0.08);
+            animation: moveClouds 40s linear infinite 5s;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        @keyframes moveClouds {
+            0% { left: -300px; }
+            100% { left: 100vw; }
         }
         </style>
-        <div class="animated-weather-bg"></div>
+        <div class="cloud-1"></div>
+        <div class="cloud-2"></div>
     """, unsafe_allow_html=True)
 
     st.title("🌐 Real-Time Pakistan & Global Weather Insights Dashboard")
     st.markdown("Automated **ETL Data Pipeline** with Pydantic Validation, SQLite Persistence, and EDA.")
 
-    # --- SESSION STATE FOR USER SPECIFIC PRIVACY ---
+    # --- SESSION STATE FOR USER PRIVACY & CITY SELECTION ---
     if "user_searched_records" not in st.session_state:
         st.session_state.user_searched_records = pd.DataFrame()
+
+    if "selected_cities_list" not in st.session_state:
+        st.session_state.selected_cities_list = ["Islamabad", "Karachi", "Lahore", "London", "New York"]
 
     # Comprehensive Raw Cities List
     raw_cities = [
@@ -175,54 +195,60 @@ def main():
     # Sidebar Configurations
     st.sidebar.header("Pipeline Configurations")
     
-    # User Profile Section
-    user_name_input = st.sidebar.text_input("👤 Enter Your Name:", value="Ali Zain Idrees")
-    
+    # Optional User Name Field (Default Empty)
+    user_name_input = st.sidebar.text_input("👤 Enter Your Name (Optional):", value="")
+    current_display_name = user_name_input.strip() if user_name_input.strip() else "Guest_User"
+
     api_key = "96df70f062038652685b4a200ede92cc"
 
     st.sidebar.markdown("---")
     st.sidebar.subheader("🔍 City Selection Engine")
-    
-    # Separate Search Box
-    search_query = st.sidebar.text_input("Type to filter city list:", placeholder="Search city name...")
 
-    # Dynamic Filtered Options
-    if search_query:
-        filtered_options = [c for c in sorted_cities if search_query.lower() in c.lower()]
-    else:
-        filtered_options = sorted_cities
-
-    # Multiselect Box holding selected cities
-    selected_cities = st.sidebar.multiselect(
-        "Selected Cities Container:",
-        options=filtered_options,
-        default=["Islamabad", "Karachi", "Lahore", "London", "New York"]
+    # 1. SEARCH BAR WITH DROPDOWN LIST
+    searched_city = st.sidebar.selectbox(
+        "Search and Add City to Container:",
+        options=["-- Type or Select City --"] + sorted_cities,
+        index=0
     )
 
-    run_pipeline_btn = st.sidebar.button("Run ETL Pipeline 🚀")
+    # Automatically add searched city to selected container
+    if searched_city != "-- Type or Select City --" and searched_city not in st.session_state.selected_cities_list:
+        st.session_state.selected_cities_list.append(searched_city)
+
+    # 2. SELECTED CITIES CONTAINER (Only displays selected cities, dropdown menu disabled)
+    selected_cities = st.sidebar.multiselect(
+        "📦 Selected Cities Container:",
+        options=st.session_state.selected_cities_list,
+        default=st.session_state.selected_cities_list
+    )
+    # Sync manual removals from container
+    st.session_state.selected_cities_list = selected_cities
+
+    # User-Friendly Action Button
+    run_pipeline_btn = st.sidebar.button("Show Weather 🌤️")
 
     # Execution Trigger
     if run_pipeline_btn:
         if not api_key:
             st.sidebar.error("Please enter a valid OpenWeatherMap API Key!")
         elif not selected_cities:
-            st.sidebar.error("Please select at least one city!")
+            st.sidebar.error("Please select at least one city in the container!")
         else:
-            with st.spinner("Extracting, Validating, and Storing Data..."):
+            with st.spinner("Fetching Weather Data..."):
                 raw_payloads = extract_weather_data(selected_cities, api_key)
-                cleaned_df = transform_and_validate_data(raw_payloads, user_name_input)
+                cleaned_df = transform_and_validate_data(raw_payloads, current_display_name)
 
                 if not cleaned_df.empty:
-                    # 1. Back-end SQLite Database mein record save karna (Master History)
+                    # Save to back-end SQLite Master History
                     load_data_to_storage(cleaned_df)
                     
-                    # 2. User ki apni private screen session state ko update karna
+                    # Update User Session State
                     if st.session_state.user_searched_records.empty:
                         st.session_state.user_searched_records = cleaned_df
                     else:
                         st.session_state.user_searched_records = pd.concat([cleaned_df, st.session_state.user_searched_records], ignore_index=True)
 
-                    st.success(f"ETL Pipeline successfully processed and saved {len(cleaned_df)} city records!")
+                    st.success(f"Weather Insights successfully fetched for {len(cleaned_df)} cities!")
                 else:
                     st.error("No valid weather records were processed.")
 
@@ -230,17 +256,17 @@ def main():
     st.header("📊 Exploratory Data Analysis & Personal Records")
 
     # --- 1. USER PERSONAL RECORD VIEW ---
-    st.subheader(f"📋 Recent Searches for: {user_name_input}")
+    st.subheader(f"📋 Recent Weather Records for: {current_display_name}")
     
     if not st.session_state.user_searched_records.empty:
         st.dataframe(st.session_state.user_searched_records, use_container_width=True)
         
-        # Clear Record Button for the User
+        # Clear Screen Record Button
         if st.button("🗑️ Clear My Screen Records"):
             st.session_state.user_searched_records = pd.DataFrame()
             st.rerun()
 
-        # Visualizations (EDA) for current user searches
+        # Visualizations (EDA)
         st.subheader("Visual Climate Analytics (Your Searched Data)")
         col1, col2 = st.columns(2)
 
@@ -262,10 +288,10 @@ def main():
             st.pyplot(fig2)
 
     else:
-        st.info("No records on your screen right now. Select cities and click 'Run ETL Pipeline' to view your results.")
+        st.info("No records on your screen right now. Select cities and click 'Show Weather 🌤️' to view your results.")
 
 
-    # --- 2. ADMIN ACCESS PANEL (USER-WISE GROUPED VIEW) ---
+    # --- 2. ADMIN ACCESS PANEL ---
     st.sidebar.markdown("---")
     st.sidebar.header("🔒 Admin Panel")
     admin_password = st.sidebar.text_input("Enter Admin Password", type="password")
@@ -278,7 +304,6 @@ def main():
         df_historical = fetch_historical_db_data()
         
         if not df_historical.empty:
-            # Group records by user_name
             if "user_name" in df_historical.columns:
                 unique_users = df_historical["user_name"].unique()
                 for user in unique_users:
