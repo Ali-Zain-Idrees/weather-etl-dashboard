@@ -156,7 +156,7 @@ def main():
         bg_style = "linear-gradient(to bottom, #09131d, #162436, #1d3557);"
         text_color = "#ffffff"
 
-    # --- CUSTOM CSS FOR EXACT ALIGNMENT & CLEAN BUTTONS ---
+    # --- EXACT 5PX DISTANCE & CLEAN POP-OVER CSS ---
     st.markdown(f"""
         <style>
         .stApp {{
@@ -166,88 +166,78 @@ def main():
 
         /* REDUCE STREAMLIT TOP PADDING */
         .block-container {{
-            padding-top: 1rem !important;
+            padding-top: 5px !important;
             padding-bottom: 2rem !important;
         }}
 
-        /* POSITION HEADER CONTROLS EXACTLY 5px FROM TOP RIGHT EDGE */
-        div[data-testid="stHorizontalBlock"]:has(div[data-testid="stPopover"]) {{
-            position: fixed !important;
-            top: 5px !important;
-            right: 5px !important;
-            z-index: 999999 !important;
+        /* ALIGN BUTTONS EXACTLY 5PX BELOW THE BLACK HEADER LINE */
+        header[data-testid="stHeader"] {{
             background: transparent !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 4px !important;
+            height: 45px !important;
         }}
 
-        /* CUSTOM STYLE FOR POPOVER BUTTONS (A/G AVATAR & THREE DOTS) */
+        /* POSITION CONTAINER RIGHT BELOW TOP LINE WITH 5PX DISTANCE */
+        div[data-testid="stHorizontalBlock"]:has(div[data-testid="stPopover"]) {{
+            position: absolute !important;
+            top: 5px !important;
+            right: 15px !important;
+            z-index: 999999 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 6px !important;
+            background: transparent !important;
+        }}
+
+        /* POPOVER BUTTON STYLING (NO BOX BY DEFAULT, CIRCLE ON HOVER) */
         div[data-testid="stPopover"] > button {{
             border: none !important;
             background: transparent !important;
             color: #ffffff !important;
-            font-size: 16px !important;
-            font-weight: bold !important;
+            font-size: 17px !important;
+            font-weight: 600 !important;
             border-radius: 50% !important;
-            width: 38px !important;
-            height: 38px !important;
+            width: 36px !important;
+            height: 36px !important;
             padding: 0 !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
             box-shadow: none !important;
+            outline: none !important;
             transition: background 0.2s ease-in-out !important;
         }}
 
+        /* CIRCLE APPEARS ONLY ON HOVER */
         div[data-testid="stPopover"] > button:hover {{
-            background: rgba(255, 255, 255, 0.2) !important;
+            background: rgba(255, 255, 255, 0.18) !important;
+            border-radius: 50% !important;
         }}
 
-        /* HIDE DOWN ARROW & EXTRA DOTS FROM POPOVERS */
-        div[data-testid="stPopover"] button svg {{
+        /* COMPLETELY HIDE DOWN ARROWS & EXTRA SVG ICONS */
+        div[data-testid="stPopover"] button svg,
+        div[data-testid="stPopover"] button span[data-testid="stPopoverIcon"],
+        div[data-testid="stPopover"] button i {{
             display: none !important;
-        }}
-        
-        div[data-testid="stPopover"] button span[data-testid="stPopoverIcon"] {{
-            display: none !important;
+            visibility: hidden !important;
+            width: 0 !important;
+            height: 0 !important;
         }}
 
-        /* SUN/MOON GLOW SHIFTED TO CENTER */
+        /* CENTER SHIFTED SUN GLOW */
         .sun-glow {{
             position: fixed;
-            top: 30px;
-            right: 35%; /* Shifted towards center */
-            width: 110px;
-            height: 110px;
-            background: radial-gradient(circle, rgba(255,223,0,0.65) 0%, rgba(255,165,0,0.12) 60%, rgba(0,0,0,0) 100%);
+            top: 40px;
+            right: 35%;
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(255,223,0,0.6) 0%, rgba(255,165,0,0.1) 60%, rgba(0,0,0,0) 100%);
             border-radius: 50%;
-            box-shadow: 0 0 50px rgba(255,223,0,0.35);
+            box-shadow: 0 0 45px rgba(255,223,0,0.3);
             pointer-events: none;
             z-index: 0;
-        }}
-
-        /* CLOUD ANIMATION */
-        .cloud-1 {{
-            position: fixed;
-            top: 4%;
-            left: -200px;
-            width: 220px;
-            height: 60px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50px;
-            animation: moveClouds 35s linear infinite;
-            z-index: 0;
-            pointer-events: none;
-        }}
-
-        @keyframes moveClouds {{
-            0% {{ left: -250px; }}
-            100% {{ left: 100vw; }}
         }}
         </style>
         
-        <div class="cloud-1"></div>
         <div class="sun-glow"></div>
     """, unsafe_allow_html=True)
 
@@ -270,14 +260,14 @@ def main():
     api_key = "96df70f062038652685b4a200ede92cc"
 
     # ==========================================
-    # HEADER TOP RIGHT CORNER (Avatar + Three Dots)
+    # HEADER CONTROLS (Avatar + Three Dots)
     # ==========================================
     h_col_left, h_col_avatar, h_col_menu = st.columns([10, 0.5, 0.5])
 
     with h_col_left:
         st.markdown("### 🌤️ **Weather Insights**")
 
-    # ICON 1: ACCOUNT AVATAR ICON (Circle with A or G, No arrows)
+    # ICON 1: ACCOUNT AVATAR ICON (Circle G/A on Hover, No Down Arrow)
     with h_col_avatar:
         if st.session_state.user_logged_in and st.session_state.logged_user_email:
             avatar_letter = st.session_state.logged_user_email[0].upper()
@@ -352,13 +342,12 @@ def main():
                     st.session_state.logged_user_email = ""
                     st.rerun()
 
-    # ICON 2: THREE DOTS MENU (⋮)
+    # ICON 2: THREE DOTS MENU (⋮ Clean Hover Circle)
     with h_col_menu:
         menu_popover = st.popover("⋮")
         with menu_popover:
             st.markdown("#### **Menu**")
             
-            # Install App option moved inside menu
             if st.button("📥 Install App"):
                 st.info("💡 Click 3 dots ⋮ on your browser -> 'Save and share' -> 'Install Weather Insights'.")
                 
@@ -375,7 +364,6 @@ def main():
             
             st.markdown("---")
 
-            # Simple Delete Data Button
             if st.button("🗑 Delete Browsing Data"):
                 st.session_state.user_searched_records = pd.DataFrame()
                 st.toast("Browsing data cleared from screen!", icon="🧹")
