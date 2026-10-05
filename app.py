@@ -104,24 +104,6 @@ def fetch_historical_db_data(db_name="weather_history.db") -> pd.DataFrame:
     return df_hist
 
 
-def delete_user_data_from_db(user_name: str, db_name="weather_history.db", csv_name="cleaned_weather.csv"):
-    """Permanently delete specific user records from SQLite and CSV."""
-    if os.path.exists(db_name):
-        conn = sqlite3.connect(db_name)
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM weather_records WHERE user_name = ?", (user_name,))
-        conn.commit()
-        conn.close()
-
-    if os.path.exists(csv_name):
-        try:
-            df_csv = pd.read_csv(csv_name)
-            df_csv = df_csv[df_csv["user_name"] != user_name]
-            df_csv.to_csv(csv_name, index=False)
-        except Exception:
-            pass
-
-
 def delete_all_data_from_db(db_name="weather_history.db", csv_name="cleaned_weather.csv"):
     """Permanently clear all database records from server."""
     if os.path.exists(db_name):
@@ -163,7 +145,7 @@ def main():
     if "app_theme" not in st.session_state:
         st.session_state.app_theme = "Dark Cosmic Blue"
 
-    # --- DYNAMIC THEME APPLIER ---
+    # --- THEME STYLING ---
     if st.session_state.app_theme == "Sunny Day Blue":
         bg_style = "linear-gradient(to bottom, #1e3c72, #2a5298, #4a90e2);"
         text_color = "#ffffff"
@@ -174,6 +156,7 @@ def main():
         bg_style = "linear-gradient(to bottom, #09131d, #162436, #1d3557);"
         text_color = "#ffffff"
 
+    # --- CUSTOM CSS FOR EXACT ALIGNMENT & CLEAN BUTTONS ---
     st.markdown(f"""
         <style>
         .stApp {{
@@ -181,61 +164,93 @@ def main():
             color: {text_color};
         }}
 
-        /* MOVING CLOUDS ANIMATION */
-        .cloud-1 {{
-            position: fixed;
-            top: 5%;
-            left: -200px;
-            width: 220px;
-            height: 65px;
-            background: rgba(255, 255, 255, 0.12);
-            border-radius: 50px;
-            box-shadow: 35px 12px 0 12px rgba(255, 255, 255, 0.12);
-            animation: moveClouds 30s linear infinite;
-            z-index: 0;
-            pointer-events: none;
+        /* REDUCE STREAMLIT TOP PADDING */
+        .block-container {{
+            padding-top: 1rem !important;
+            padding-bottom: 2rem !important;
         }}
 
-        .cloud-2 {{
+        /* POSITION HEADER CONTROLS EXACTLY 5px FROM TOP RIGHT EDGE */
+        div[data-testid="stHorizontalBlock"]:has(div[data-testid="stPopover"]) {{
+            position: fixed !important;
+            top: 5px !important;
+            right: 5px !important;
+            z-index: 999999 !important;
+            background: transparent !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+        }}
+
+        /* CUSTOM STYLE FOR POPOVER BUTTONS (A/G AVATAR & THREE DOTS) */
+        div[data-testid="stPopover"] > button {{
+            border: none !important;
+            background: transparent !important;
+            color: #ffffff !important;
+            font-size: 16px !important;
+            font-weight: bold !important;
+            border-radius: 50% !important;
+            width: 38px !important;
+            height: 38px !important;
+            padding: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            box-shadow: none !important;
+            transition: background 0.2s ease-in-out !important;
+        }}
+
+        div[data-testid="stPopover"] > button:hover {{
+            background: rgba(255, 255, 255, 0.2) !important;
+        }}
+
+        /* HIDE DOWN ARROW & EXTRA DOTS FROM POPOVERS */
+        div[data-testid="stPopover"] button svg {{
+            display: none !important;
+        }}
+        
+        div[data-testid="stPopover"] button span[data-testid="stPopoverIcon"] {{
+            display: none !important;
+        }}
+
+        /* SUN/MOON GLOW SHIFTED TO CENTER */
+        .sun-glow {{
             position: fixed;
-            top: 18%;
-            left: -300px;
-            width: 300px;
-            height: 85px;
-            background: rgba(255, 255, 255, 0.08);
-            border-radius: 60px;
-            box-shadow: 45px 18px 0 18px rgba(255, 255, 255, 0.08);
-            animation: moveClouds 45s linear infinite 8s;
+            top: 30px;
+            right: 35%; /* Shifted towards center */
+            width: 110px;
+            height: 110px;
+            background: radial-gradient(circle, rgba(255,223,0,0.65) 0%, rgba(255,165,0,0.12) 60%, rgba(0,0,0,0) 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 50px rgba(255,223,0,0.35);
+            pointer-events: none;
+            z-index: 0;
+        }}
+
+        /* CLOUD ANIMATION */
+        .cloud-1 {{
+            position: fixed;
+            top: 4%;
+            left: -200px;
+            width: 220px;
+            height: 60px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50px;
+            animation: moveClouds 35s linear infinite;
             z-index: 0;
             pointer-events: none;
         }}
 
         @keyframes moveClouds {{
-            0% {{ left: -350px; }}
+            0% {{ left: -250px; }}
             100% {{ left: 100vw; }}
-        }}
-
-        /* SUN GLOW EFFECT */
-        .sun-glow {{
-            position: fixed;
-            top: 40px;
-            right: 120px;
-            width: 100px;
-            height: 100px;
-            background: radial-gradient(circle, rgba(255,223,0,0.7) 0%, rgba(255,165,0,0.15) 60%, rgba(0,0,0,0) 100%);
-            border-radius: 50%;
-            box-shadow: 0 0 45px rgba(255,223,0,0.4);
-            pointer-events: none;
-            z-index: 0;
         }}
         </style>
         
         <div class="cloud-1"></div>
-        <div class="cloud-2"></div>
         <div class="sun-glow"></div>
     """, unsafe_allow_html=True)
 
-    # Raw Cities List
     raw_cities = [
         "Islamabad", "Lahore", "Karachi", "Peshawar", "Quetta", "Muzaffarabad", "Gilgit",
         "Faisalabad", "Rawalpindi", "Multan", "Gujranwala", "Sargodha", "Sialkot", "Bahawalpur",
@@ -255,25 +270,21 @@ def main():
     api_key = "96df70f062038652685b4a200ede92cc"
 
     # ==========================================
-    # TOP HEADER NAVIGATION BAR (Chrome Style)
+    # HEADER TOP RIGHT CORNER (Avatar + Three Dots)
     # ==========================================
-    header_col1, header_col2, header_col3, header_col4 = st.columns([5, 1.5, 0.6, 0.6])
+    h_col_left, h_col_avatar, h_col_menu = st.columns([10, 0.5, 0.5])
 
-    with header_col1:
+    with h_col_left:
         st.markdown("### 🌤️ **Weather Insights**")
 
-    with header_col2:
-        if st.button("📥 Install App", key="install_btn"):
-            st.info("💡 **Install App:** Click 3 dots ⋮ on your browser -> 'Save and share' -> 'Install Weather Insights'.")
-
-    # ICON 1: ACCOUNT AVATAR ICON (Circle with A or G)
-    with header_col3:
+    # ICON 1: ACCOUNT AVATAR ICON (Circle with A or G, No arrows)
+    with h_col_avatar:
         if st.session_state.user_logged_in and st.session_state.logged_user_email:
             avatar_letter = st.session_state.logged_user_email[0].upper()
         else:
             avatar_letter = "G"
 
-        account_popover = st.popover(f"🔵 **{avatar_letter}**")
+        account_popover = st.popover(avatar_letter)
         
         with account_popover:
             st.markdown("#### **Account Settings**")
@@ -342,10 +353,16 @@ def main():
                     st.rerun()
 
     # ICON 2: THREE DOTS MENU (⋮)
-    with header_col4:
+    with h_col_menu:
         menu_popover = st.popover("⋮")
         with menu_popover:
             st.markdown("#### **Menu**")
+            
+            # Install App option moved inside menu
+            if st.button("📥 Install App"):
+                st.info("💡 Click 3 dots ⋮ on your browser -> 'Save and share' -> 'Install Weather Insights'.")
+                
+            st.markdown("---")
             if st.button("🏠 Main Dashboard"):
                 st.session_state.active_view = "main"
                 st.rerun()
@@ -358,7 +375,7 @@ def main():
             
             st.markdown("---")
 
-            # Simple Delete Button for Users
+            # Simple Delete Data Button
             if st.button("🗑 Delete Browsing Data"):
                 st.session_state.user_searched_records = pd.DataFrame()
                 st.toast("Browsing data cleared from screen!", icon="🧹")
@@ -367,7 +384,7 @@ def main():
     st.markdown("---")
 
     # ==========================================
-    # SIDEBAR: ADMIN PANEL (FOR RESTORE / PERMANENT DELETE)
+    # SIDEBAR: ADMIN PANEL
     # ==========================================
     st.sidebar.title("🔒 Security & Admin Panel")
     admin_password = st.sidebar.text_input("Enter Admin Password", type="password")
@@ -504,7 +521,7 @@ def main():
             st.info("No records on your screen right now. Select cities and click 'Show Weather 🌤️' to view your results.")
 
     # ==========================================
-    # ADMIN PANEL VIEW (RESTORE & PERMANENT DELETE CONTROLS)
+    # ADMIN PANEL VIEW
     # ==========================================
     if admin_password == "ali123":
         st.markdown("---")
