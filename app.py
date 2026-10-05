@@ -156,7 +156,7 @@ def main():
         bg_style = "linear-gradient(to bottom, #09131d, #162436, #1d3557);"
         text_color = "#ffffff"
 
-    # --- EXACT 5PX DISTANCE & CLEAN POP-OVER CSS ---
+    # --- ORIGINAL STYLING WITH ONLY 5PX RIGHT ALIGNMENT FOR BUTTONS ---
     st.markdown(f"""
         <style>
         .stApp {{
@@ -164,66 +164,15 @@ def main():
             color: {text_color};
         }}
 
-        /* REDUCE STREAMLIT TOP PADDING */
-        .block-container {{
-            padding-top: 5px !important;
-            padding-bottom: 2rem !important;
-        }}
-
-        /* ALIGN BUTTONS EXACTLY 5PX BELOW THE BLACK HEADER LINE */
-        header[data-testid="stHeader"] {{
-            background: transparent !important;
-            height: 45px !important;
-        }}
-
-        /* POSITION CONTAINER RIGHT BELOW TOP LINE WITH 5PX DISTANCE */
+        /* MOVE ONLY THE ACCOUNT & THREE DOTS BUTTONS CONTAINER TO 5PX FROM RIGHT */
         div[data-testid="stHorizontalBlock"]:has(div[data-testid="stPopover"]) {{
             position: absolute !important;
-            top: 5px !important;
-            right: 15px !important;
+            right: 5px !important;
+            top: 0px !important;
             z-index: 999999 !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 6px !important;
-            background: transparent !important;
         }}
 
-        /* POPOVER BUTTON STYLING (NO BOX BY DEFAULT, CIRCLE ON HOVER) */
-        div[data-testid="stPopover"] > button {{
-            border: none !important;
-            background: transparent !important;
-            color: #ffffff !important;
-            font-size: 17px !important;
-            font-weight: 600 !important;
-            border-radius: 50% !important;
-            width: 36px !important;
-            height: 36px !important;
-            padding: 0 !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            box-shadow: none !important;
-            outline: none !important;
-            transition: background 0.2s ease-in-out !important;
-        }}
-
-        /* CIRCLE APPEARS ONLY ON HOVER */
-        div[data-testid="stPopover"] > button:hover {{
-            background: rgba(255, 255, 255, 0.18) !important;
-            border-radius: 50% !important;
-        }}
-
-        /* COMPLETELY HIDE DOWN ARROWS & EXTRA SVG ICONS */
-        div[data-testid="stPopover"] button svg,
-        div[data-testid="stPopover"] button span[data-testid="stPopoverIcon"],
-        div[data-testid="stPopover"] button i {{
-            display: none !important;
-            visibility: hidden !important;
-            width: 0 !important;
-            height: 0 !important;
-        }}
-
-        /* CENTER SHIFTED SUN GLOW */
+        /* SUN GLOW EFFECT */
         .sun-glow {{
             position: fixed;
             top: 40px;
@@ -267,7 +216,7 @@ def main():
     with h_col_left:
         st.markdown("### 🌤️ **Weather Insights**")
 
-    # ICON 1: ACCOUNT AVATAR ICON (Circle G/A on Hover, No Down Arrow)
+    # ICON 1: ACCOUNT AVATAR ICON
     with h_col_avatar:
         if st.session_state.user_logged_in and st.session_state.logged_user_email:
             avatar_letter = st.session_state.logged_user_email[0].upper()
@@ -342,7 +291,7 @@ def main():
                     st.session_state.logged_user_email = ""
                     st.rerun()
 
-    # ICON 2: THREE DOTS MENU (⋮ Clean Hover Circle)
+    # ICON 2: THREE DOTS MENU (⋮)
     with h_col_menu:
         menu_popover = st.popover("⋮")
         with menu_popover:
