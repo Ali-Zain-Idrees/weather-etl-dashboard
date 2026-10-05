@@ -106,9 +106,9 @@ def fetch_historical_db_data(db_name="weather_history.db") -> pd.DataFrame:
 # 3. STREAMLIT WEB DASHBOARD
 # ==========================================
 def main():
-    st.set_page_config(page_title="Pakistan & Global Weather Pipeline", layout="wide")
+    st.set_page_config(page_title="Weather Insights", layout="wide", initial_sidebar_state="collapsed")
 
-    # --- ADVANCED DYNAMIC WEATHER ANIMATIONS (Clouds, Rain, Sun) ---
+    # --- ADVANCED DYNAMIC WEATHER ANIMATIONS ---
     st.markdown("""
         <style>
         .stApp {
@@ -116,16 +116,16 @@ def main():
             color: #ffffff;
         }
 
-        /* 1. MOVING CLOUDS ANIMATION */
+        /* MOVING CLOUDS ANIMATION */
         .cloud-1 {
             position: fixed;
             top: 5%;
             left: -200px;
             width: 220px;
             height: 65px;
-            background: rgba(255, 255, 255, 0.15);
+            background: rgba(255, 255, 255, 0.12);
             border-radius: 50px;
-            box-shadow: 35px 12px 0 12px rgba(255, 255, 255, 0.15);
+            box-shadow: 35px 12px 0 12px rgba(255, 255, 255, 0.12);
             animation: moveClouds 30s linear infinite;
             z-index: 0;
             pointer-events: none;
@@ -137,9 +137,9 @@ def main():
             left: -300px;
             width: 300px;
             height: 85px;
-            background: rgba(255, 255, 255, 0.10);
+            background: rgba(255, 255, 255, 0.08);
             border-radius: 60px;
-            box-shadow: 45px 18px 0 18px rgba(255, 255, 255, 0.10);
+            box-shadow: 45px 18px 0 18px rgba(255, 255, 255, 0.08);
             animation: moveClouds 45s linear infinite 8s;
             z-index: 0;
             pointer-events: none;
@@ -150,14 +150,14 @@ def main():
             100% { left: 100vw; }
         }
 
-        /* 2. RAIN ANIMATION EFFECT */
+        /* RAIN ANIMATION EFFECT */
         .rain-drop-1 {
             position: fixed;
             top: -10%;
             left: 20%;
             width: 2px;
             height: 40px;
-            background: rgba(200, 225, 255, 0.4);
+            background: rgba(200, 225, 255, 0.35);
             animation: fallRain 2s linear infinite;
             pointer-events: none;
         }
@@ -165,22 +165,11 @@ def main():
         .rain-drop-2 {
             position: fixed;
             top: -10%;
-            left: 60%;
+            left: 70%;
             width: 2px;
             height: 50px;
-            background: rgba(200, 225, 255, 0.35);
-            animation: fallRain 2.5s linear infinite 0.7s;
-            pointer-events: none;
-        }
-
-        .rain-drop-3 {
-            position: fixed;
-            top: -10%;
-            left: 80%;
-            width: 2px;
-            height: 35px;
             background: rgba(200, 225, 255, 0.3);
-            animation: fallRain 1.8s linear infinite 1.2s;
+            animation: fallRain 2.5s linear infinite 0.7s;
             pointer-events: none;
         }
 
@@ -189,24 +178,18 @@ def main():
             100% { top: 100%; opacity: 0.2; }
         }
 
-        /* 3. GLOWING SUN EFFECT BEHIND CLOUDS */
+        /* GLOWING SUN EFFECT */
         .sun-glow {
             position: fixed;
             top: 40px;
             right: 120px;
-            width: 110px;
-            height: 110px;
-            background: radial-gradient(circle, rgba(255,223,0,0.8) 0%, rgba(255,165,0,0.2) 60%, rgba(0,0,0,0) 100%);
+            width: 100px;
+            height: 100px;
+            background: radial-gradient(circle, rgba(255,223,0,0.7) 0%, rgba(255,165,0,0.15) 60%, rgba(0,0,0,0) 100%);
             border-radius: 50%;
-            box-shadow: 0 0 50px rgba(255,223,0,0.5);
+            box-shadow: 0 0 45px rgba(255,223,0,0.4);
             pointer-events: none;
             z-index: 0;
-            animation: pulseSun 4s ease-in-out infinite alternate;
-        }
-
-        @keyframes pulseSun {
-            0% { transform: scale(0.95); opacity: 0.7; }
-            100% { transform: scale(1.08); opacity: 1; }
         }
         </style>
         
@@ -214,7 +197,6 @@ def main():
         <div class="cloud-2"></div>
         <div class="rain-drop-1"></div>
         <div class="rain-drop-2"></div>
-        <div class="rain-drop-3"></div>
         <div class="sun-glow"></div>
     """, unsafe_allow_html=True)
 
@@ -231,9 +213,11 @@ def main():
     if "logged_user_email" not in st.session_state:
         st.session_state.logged_user_email = ""
 
-    # Comprehensive Raw Cities List
+    if "active_view" not in st.session_state:
+        st.session_state.active_view = "main"
+
+    # Raw Cities List
     raw_cities = [
-        # --- PAKISTAN (Districts & Major Cities) ---
         "Islamabad", "Lahore", "Karachi", "Peshawar", "Quetta", "Muzaffarabad", "Gilgit",
         "Faisalabad", "Rawalpindi", "Multan", "Gujranwala", "Sargodha", "Sialkot", "Bahawalpur",
         "Jhang", "Sheikhupura", "Gujrat", "Sahiwal", "Kasur", "Rahim Yar Khan", "Okara",
@@ -245,164 +229,223 @@ def main():
         "Charsadda", "Mansehra", "Bannu", "Chitral", "Swat", "Dir",
         "Turbat", "Khuzdar", "Hub", "Chaman", "Gwadar", "Dera Murad Jamali", "Sibi", "Zhob",
         "Loralai", "Kalat", "Mirpur", "Rawalakot", "Kotli", "Bhimber", "Bagh", "Skardu", "Hunza",
-
-        # --- INTERNATIONAL CITIES ---
-        "New Delhi", "Mumbai", "Bangalore", "Kolkata", "Chennai", "Hyderabad", "Ahmedabad", "Jaipur", "Chandigarh", "Lucknow",
-        "Riyadh", "Makkah", "Madinah", "Jeddah", "Dammam", "Dubai", "Abu Dhabi", "Sharjah",
-        "New York", "Washington", "Los Angeles", "Chicago", "Houston", "Miami", "Toronto", "Vancouver", "Montreal",
-        "London", "Manchester", "Birmingham", "Paris", "Berlin", "Rome", "Madrid", "Amsterdam", "Moscow", "Istanbul",
-        "Beijing", "Shanghai", "Tokyo", "Osaka", "Seoul", "Bangkok", "Kuala Lumpur", "Singapore",
-        "Sydney", "Melbourne", "Brisbane", "Cairo", "Cape Town", "Tehran", "Kabul"
+        "New Delhi", "Mumbai", "Bangalore", "Dubai", "Abu Dhabi", "New York", "London", "Paris", "Tokyo", "Sydney"
     ]
 
     sorted_cities = sorted(list(dict.fromkeys(raw_cities)))
     api_key = "96df70f062038652685b4a200ede92cc"
 
     # ==========================================
-    # SIDEBAR: PROFESSIONAL WEBSITE MENU
+    # TOP HEADER NAVIGATION BAR (Chrome Style)
     # ==========================================
-    st.sidebar.title("⚙️ Portal Navigation")
+    header_col1, header_col2, header_col3, header_col4, header_col5 = st.columns([4, 1.2, 1.2, 1.2, 0.8])
 
-    # 1. ACCOUNT MANAGEMENT (SIGN UP / SIGN IN)
-    st.sidebar.subheader("👤 Account Management")
-    if not st.session_state.user_logged_in:
-        auth_choice = st.sidebar.radio("Account Access:", ["Sign In", "Sign Up"])
-        user_email = st.sidebar.text_input("Email Address:", placeholder="user@example.com")
-        user_pass = st.sidebar.text_input("Password:", type="password")
+    with header_col1:
+        st.markdown("### 🌤️ **Weather Insights**")
 
-        if auth_choice == "Sign Up":
-            if st.sidebar.button("Create Account"):
-                if user_email and user_pass:
-                    st.session_state.user_logged_in = True
-                    st.session_state.logged_user_email = user_email
-                    st.sidebar.success("Account created successfully!")
+    with header_col2:
+        if st.button("📥 Install App", key="install_btn"):
+            st.toast("App Installation link generated! Click to add shortcut to desktop.", icon="💻")
+
+    with header_col3:
+        # Account Management Icon Dropdown
+        account_label = "👤 Account" if not st.session_state.user_logged_in else f"👤 {st.session_state.logged_user_email.split('@')[0]}"
+        account_popover = st.popover(account_label)
+        
+        with account_popover:
+            st.markdown("#### **Weather Insights Profile**")
+            if not st.session_state.user_logged_in:
+                st.info("Sign in to sync your search history across devices.")
+                user_email_input = st.text_input("Email", placeholder="user@example.com")
+                user_pass_input = st.text_input("Password", type="password")
+                
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    if st.button("Sign In"):
+                        if user_email_input:
+                            st.session_state.user_logged_in = True
+                            st.session_state.logged_user_email = user_email_input
+                            st.rerun()
+                with col_b:
+                    if st.button("Sign Up"):
+                        if user_email_input:
+                            st.session_state.user_logged_in = True
+                            st.session_state.logged_user_email = user_email_input
+                            st.rerun()
+            else:
+                st.success(f"Signed in as:\n**{st.session_state.logged_user_email}**")
+                st.button("⚙️ Manage Your Weather Insights Account")
+                st.button("🎨 Customize Profile")
+                st.button("👥 Open Guest Profile")
+                st.button("🛠️ Manage Weather Insights Profiles")
+                if st.button("🚪 Sign Out of Weather Insights"):
+                    st.session_state.user_logged_in = False
+                    st.session_state.logged_user_email = ""
                     st.rerun()
-                else:
-                    st.sidebar.error("Please fill all credentials.")
-        else:
-            if st.sidebar.button("Login"):
-                if user_email:
-                    st.session_state.user_logged_in = True
-                    st.session_state.logged_user_email = user_email
-                    st.sidebar.success("Logged in successfully!")
-                    st.rerun()
-                else:
-                    st.sidebar.error("Enter valid email.")
-    else:
-        st.sidebar.info(f"Logged in as:\n**{st.session_state.logged_user_email}**")
-        if st.sidebar.button("Sign Out"):
-            st.session_state.user_logged_in = False
-            st.session_state.logged_user_email = ""
-            st.rerun()
 
-    st.sidebar.markdown("---")
+    with header_col4:
+        # Three Dots "⋮" Menu
+        menu_popover = st.popover("⋮ Menu")
+        with menu_popover:
+            st.markdown("#### **Browser Options**")
+            if st.button("📜 History"):
+                st.session_state.active_view = "history"
+                st.rerun()
+            if st.button("📥 Downloads / Saved CSV"):
+                st.session_state.active_view = "downloads"
+                st.rerun()
+            if st.button("🏠 Main Dashboard"):
+                st.session_state.active_view = "main"
+                st.rerun()
+            st.markdown("---")
+            if st.button("🗑️ Delete Browsing Data"):
+                st.session_state.user_searched_records = pd.DataFrame()
+                st.toast("Search history and screen data cleared!", icon="🧹")
+                st.rerun()
 
-    # 2. APP SETTINGS & THEMES
-    st.sidebar.subheader("🎨 Customization Settings")
-    selected_theme = st.sidebar.selectbox("App Color Theme:", ["Dark Blue Storm", "Midnight Dark", "Sunny Blue"])
-    zoom_level = st.sidebar.select_slider("Text Zoom Level:", options=["90%", "100%", "110%", "120%"], value="100%")
-
-    st.sidebar.markdown("---")
-
-    # 3. ADMIN PANEL
-    st.sidebar.subheader("🔒 Admin Controls")
-    admin_password = st.sidebar.text_input("Enter Admin Password", type="password")
-
-
-    # ==========================================
-    # MAIN CENTER PAGE (CHROME STYLE LAYOUT)
-    # ==========================================
-    st.title("🌐 Real-Time Pakistan & Global Weather Insights")
-    st.markdown("Automated **ETL Data Pipeline** with Pydantic Validation, SQLite Persistence, and EDA.")
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    # CENTER SECTION 1: NAME INPUT FIELD
-    default_name_val = st.session_state.logged_user_email if st.session_state.user_logged_in else ""
-    user_name_input = st.text_input("👤 Enter Your Name (Optional):", value=default_name_val, placeholder="e.g. Ali Zain Idrees")
-    current_display_name = user_name_input.strip() if user_name_input.strip() else ("Guest_User" if not st.session_state.logged_user_email else st.session_state.logged_user_email)
-
-    # CENTER SECTION 2: GOOGLE CHROME STYLE SEARCH BAR
-    st.subheader("🔍 Search and Select Cities")
-    
-    searched_city = st.selectbox(
-        "Search city from A-Z list:",
-        options=["-- Type or Select City --"] + sorted_cities,
-        index=0
-    )
-
-    if searched_city != "-- Type or Select City --" and searched_city not in st.session_state.selected_cities_list:
-        st.session_state.selected_cities_list.append(searched_city)
-
-    # CENTER SECTION 3: CONTAINER FOR SELECTED CITIES
-    selected_cities = st.multiselect(
-        "📦 Selected Cities Container:",
-        options=st.session_state.selected_cities_list,
-        default=st.session_state.selected_cities_list
-    )
-    st.session_state.selected_cities_list = selected_cities
-
-    # ACTION BUTTON
-    st.markdown("<br>", unsafe_allow_html=True)
-    run_pipeline_btn = st.button("Show Weather 🌤️", use_container_width=True)
-
-    # EXECUTION
-    if run_pipeline_btn:
-        if not selected_cities:
-            st.error("Please select at least one city in the container!")
-        else:
-            with st.spinner("Fetching Weather Data..."):
-                raw_payloads = extract_weather_data(selected_cities, api_key)
-                cleaned_df = transform_and_validate_data(raw_payloads, current_display_name)
-
-                if not cleaned_df.empty:
-                    load_data_to_storage(cleaned_df)
-                    
-                    if st.session_state.user_searched_records.empty:
-                        st.session_state.user_searched_records = cleaned_df
-                    else:
-                        st.session_state.user_searched_records = pd.concat([cleaned_df, st.session_state.user_searched_records], ignore_index=True)
-
-                    st.success(f"Weather Insights successfully fetched for {len(cleaned_df)} cities!")
-                else:
-                    st.error("No valid weather records were processed.")
+    with header_col5:
+        st.markdown("⭐")
 
     st.markdown("---")
 
-    # DISPLAY RECORDS AND ANALYTICS
-    st.header("📊 Exploratory Data Analysis & Personal Records")
-    st.subheader(f"📋 Recent Weather Records for: {current_display_name}")
-    
-    if not st.session_state.user_searched_records.empty:
-        st.dataframe(st.session_state.user_searched_records, use_container_width=True)
+    # ==========================================
+    # SIDEBAR: ADMIN ACCESS ONLY
+    # ==========================================
+    st.sidebar.title("🔒 Security & Admin")
+    admin_password = st.sidebar.text_input("Enter Admin Password", type="password")
+
+    # ==========================================
+    # VIEW ROUTING (Main vs History vs Downloads)
+    # ==========================================
+
+    # --- VIEW 1: HISTORY TAB ---
+    if st.session_state.active_view == "history":
+        st.header("📜 Weather Insights - Search History")
+        st.caption("All previously queried city data and timestamps.")
         
-        if st.button("🗑️ Clear My Screen Records"):
-            st.session_state.user_searched_records = pd.DataFrame()
+        df_historical = fetch_historical_db_data()
+        if not df_historical.empty:
+            st.dataframe(df_historical, use_container_width=True)
+        else:
+            st.info("No historical searches found in database.")
+            
+        if st.button("⬅️ Back to Main Dashboard"):
+            st.session_state.active_view = "main"
             st.rerun()
 
-        st.subheader("Visual Climate Analytics (Your Searched Data)")
-        col1, col2 = st.columns(2)
+    # --- VIEW 2: DOWNLOADS TAB ---
+    elif st.session_state.active_view == "downloads":
+        st.header("📥 Weather Insights - Downloads & Export")
+        st.caption("Download your collected weather datasets in CSV format.")
+        
+        if not st.session_state.user_searched_records.empty:
+            csv_data = st.session_state.user_searched_records.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Download Current Session Data (CSV)",
+                data=csv_data,
+                file_name=f"weather_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                mime="text/csv"
+            )
+            st.dataframe(st.session_state.user_searched_records, use_container_width=True)
+        else:
+            st.info("No active records available to download. Please run a search first.")
+            
+        if st.button("⬅️ Back to Main Dashboard"):
+            st.session_state.active_view = "main"
+            st.rerun()
 
-        with col1:
-            st.markdown("#### Temperature Distribution by City (°C)")
-            fig1, ax1 = plt.subplots(figsize=(10, 5))
-            sns.barplot(data=st.session_state.user_searched_records.head(20), x="city", y="temperature_celsius", ax=ax1, palette="mako")
-            plt.xticks(rotation=45, ha='right')
-            plt.ylabel("Temperature (°C)")
-            st.pyplot(fig1)
-
-        with col2:
-            st.markdown("#### Humidity Levels Across Target Cities (%)")
-            fig2, ax2 = plt.subplots(figsize=(10, 5))
-            sns.scatterplot(data=st.session_state.user_searched_records.head(20), x="temperature_celsius", y="humidity", hue="city", s=150, ax=ax2)
-            plt.xlabel("Temperature (°C)")
-            plt.ylabel("Humidity (%)")
-            plt.xticks(rotation=45, ha='right')
-            st.pyplot(fig2)
+    # --- VIEW 3: MAIN DASHBOARD VIEW ---
     else:
-        st.info("No records on your screen right now. Select cities and click 'Show Weather 🌤️' to view your results.")
+        st.title("🌐 Real-Time Pakistan & Global Weather Insights")
+        st.markdown("Automated **ETL Data Pipeline** with Pydantic Validation, SQLite Persistence, and EDA.")
 
-    # ADMIN VIEW
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        # CENTER SECTION 1: USER NAME
+        default_name_val = st.session_state.logged_user_email if st.session_state.user_logged_in else ""
+        user_name_input = st.text_input("👤 Enter Your Name (Optional):", value=default_name_val, placeholder="e.g. Ali Zain Idrees")
+        current_display_name = user_name_input.strip() if user_name_input.strip() else ("Guest_User" if not st.session_state.logged_user_email else st.session_state.logged_user_email)
+
+        # CENTER SECTION 2: SEARCH BAR
+        st.subheader("🔍 Search and Select Cities")
+        searched_city = st.selectbox(
+            "Search city from A-Z list:",
+            options=["-- Type or Select City --"] + sorted_cities,
+            index=0
+        )
+
+        if searched_city != "-- Type or Select City --" and searched_city not in st.session_state.selected_cities_list:
+            st.session_state.selected_cities_list.append(searched_city)
+
+        # CENTER SECTION 3: SELECTED CONTAINER
+        selected_cities = st.multiselect(
+            "📦 Selected Cities Container:",
+            options=st.session_state.selected_cities_list,
+            default=st.session_state.selected_cities_list
+        )
+        st.session_state.selected_cities_list = selected_cities
+
+        # ACTION BUTTON
+        st.markdown("<br>", unsafe_allow_html=True)
+        run_pipeline_btn = st.button("Show Weather 🌤️", use_container_width=True)
+
+        # EXECUTION
+        if run_pipeline_btn:
+            if not selected_cities:
+                st.error("Please select at least one city in the container!")
+            else:
+                with st.spinner("Fetching Weather Data..."):
+                    raw_payloads = extract_weather_data(selected_cities, api_key)
+                    cleaned_df = transform_and_validate_data(raw_payloads, current_display_name)
+
+                    if not cleaned_df.empty:
+                        load_data_to_storage(cleaned_df)
+                        
+                        if st.session_state.user_searched_records.empty:
+                            st.session_state.user_searched_records = cleaned_df
+                        else:
+                            st.session_state.user_searched_records = pd.concat([cleaned_df, st.session_state.user_searched_records], ignore_index=True)
+
+                        st.success(f"Weather Insights successfully fetched for {len(cleaned_df)} cities!")
+                    else:
+                        st.error("No valid weather records were processed.")
+
+        st.markdown("---")
+
+        # DISPLAY EDA & DATA
+        st.header("📊 Exploratory Data Analysis & Personal Records")
+        st.subheader(f"📋 Recent Weather Records for: {current_display_name}")
+        
+        if not st.session_state.user_searched_records.empty:
+            st.dataframe(st.session_state.user_searched_records, use_container_width=True)
+            
+            if st.button("🗑️️ Clear My Screen Records"):
+                st.session_state.user_searched_records = pd.DataFrame()
+                st.rerun()
+
+            st.subheader("Visual Climate Analytics (Your Searched Data)")
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown("#### Temperature Distribution by City (°C)")
+                fig1, ax1 = plt.subplots(figsize=(10, 5))
+                sns.barplot(data=st.session_state.user_searched_records.head(20), x="city", y="temperature_celsius", ax=ax1, palette="mako")
+                plt.xticks(rotation=45, ha='right')
+                plt.ylabel("Temperature (°C)")
+                st.pyplot(fig1)
+
+            with col2:
+                st.markdown("#### Humidity Levels Across Target Cities (%)")
+                fig2, ax2 = plt.subplots(figsize=(10, 5))
+                sns.scatterplot(data=st.session_state.user_searched_records.head(20), x="temperature_celsius", y="humidity", hue="city", s=150, ax=ax2)
+                plt.xlabel("Temperature (°C)")
+                plt.ylabel("Humidity (%)")
+                plt.xticks(rotation=45, ha='right')
+                st.pyplot(fig2)
+        else:
+            st.info("No records on your screen right now. Select cities and click 'Show Weather 🌤️' to view your results.")
+
+    # ADMIN PANEL VIEW
     if admin_password == "ali123":
         st.markdown("---")
         st.header("👑 Admin View: User-Wise Categorized Records")
