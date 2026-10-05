@@ -156,7 +156,7 @@ def main():
         bg_style = "linear-gradient(to bottom, #09131d, #162436, #1d3557);"
         text_color = "#ffffff"
 
-    # --- ORIGINAL STYLING WITH ONLY 5PX RIGHT ALIGNMENT FOR BUTTONS ---
+    # --- FIXED CSS TO PREVENT OVERLAPPING ---
     st.markdown(f"""
         <style>
         .stApp {{
@@ -164,12 +164,13 @@ def main():
             color: {text_color};
         }}
 
-        /* MOVE ONLY THE ACCOUNT & THREE DOTS BUTTONS CONTAINER TO 5PX FROM RIGHT */
-        div[data-testid="stHorizontalBlock"]:has(div[data-testid="stPopover"]) {{
-            position: absolute !important;
-            right: 5px !important;
-            top: 0px !important;
-            z-index: 999999 !important;
+        /* CLEAN HEADER ALIGNMENT (NO OVERLAP) */
+        .header-container {{
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
         }}
 
         /* SUN GLOW EFFECT */
@@ -209,21 +210,21 @@ def main():
     api_key = "96df70f062038652685b4a200ede92cc"
 
     # ==========================================
-    # HEADER CONTROLS (Avatar + Three Dots)
+    # SEPARATE HEADER ROW (NO OVERLAPPING)
     # ==========================================
-    h_col_left, h_col_avatar, h_col_menu = st.columns([10, 0.5, 0.5])
+    header_top_col1, header_top_col2, header_top_col3 = st.columns([8, 1, 1])
 
-    with h_col_left:
+    with header_top_col1:
         st.markdown("### 🌤️ **Weather Insights**")
 
     # ICON 1: ACCOUNT AVATAR ICON
-    with h_col_avatar:
+    with header_top_col2:
         if st.session_state.user_logged_in and st.session_state.logged_user_email:
             avatar_letter = st.session_state.logged_user_email[0].upper()
         else:
             avatar_letter = "G"
 
-        account_popover = st.popover(avatar_letter)
+        account_popover = st.popover(f"👤 {avatar_letter}")
         
         with account_popover:
             st.markdown("#### **Account Settings**")
@@ -292,8 +293,8 @@ def main():
                     st.rerun()
 
     # ICON 2: THREE DOTS MENU (⋮)
-    with h_col_menu:
-        menu_popover = st.popover("⋮")
+    with header_top_col3:
+        menu_popover = st.popover("⋮ Menu")
         with menu_popover:
             st.markdown("#### **Menu**")
             
