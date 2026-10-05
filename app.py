@@ -108,62 +108,128 @@ def fetch_historical_db_data(db_name="weather_history.db") -> pd.DataFrame:
 def main():
     st.set_page_config(page_title="Pakistan & Global Weather Pipeline", layout="wide")
 
-    # --- PURE CSS ANIMATED WEATHER BACKGROUND (Moving Clouds) ---
+    # --- ADVANCED DYNAMIC WEATHER ANIMATIONS (Clouds, Rain, Sun) ---
     st.markdown("""
         <style>
         .stApp {
-            background: linear-gradient(to bottom, #0b131e, #1a2a3a, #203a43);
+            background: linear-gradient(to bottom, #09131d, #162436, #1d3557);
             color: #ffffff;
         }
 
-        /* Animated Cloud 1 */
+        /* 1. MOVING CLOUDS ANIMATION */
         .cloud-1 {
             position: fixed;
-            top: 8%;
+            top: 5%;
             left: -200px;
-            width: 200px;
-            height: 60px;
-            background: rgba(255, 255, 255, 0.12);
+            width: 220px;
+            height: 65px;
+            background: rgba(255, 255, 255, 0.15);
             border-radius: 50px;
-            box-shadow: 30px 10px 0 10px rgba(255, 255, 255, 0.12);
-            animation: moveClouds 25s linear infinite;
+            box-shadow: 35px 12px 0 12px rgba(255, 255, 255, 0.15);
+            animation: moveClouds 30s linear infinite;
             z-index: 0;
             pointer-events: none;
         }
 
-        /* Animated Cloud 2 */
         .cloud-2 {
             position: fixed;
-            top: 25%;
-            left: -250px;
-            width: 280px;
-            height: 80px;
-            background: rgba(255, 255, 255, 0.08);
+            top: 18%;
+            left: -300px;
+            width: 300px;
+            height: 85px;
+            background: rgba(255, 255, 255, 0.10);
             border-radius: 60px;
-            box-shadow: 40px 15px 0 15px rgba(255, 255, 255, 0.08);
-            animation: moveClouds 40s linear infinite 5s;
+            box-shadow: 45px 18px 0 18px rgba(255, 255, 255, 0.10);
+            animation: moveClouds 45s linear infinite 8s;
             z-index: 0;
             pointer-events: none;
         }
 
         @keyframes moveClouds {
-            0% { left: -300px; }
+            0% { left: -350px; }
             100% { left: 100vw; }
         }
+
+        /* 2. RAIN ANIMATION EFFECT */
+        .rain-drop-1 {
+            position: fixed;
+            top: -10%;
+            left: 20%;
+            width: 2px;
+            height: 40px;
+            background: rgba(200, 225, 255, 0.4);
+            animation: fallRain 2s linear infinite;
+            pointer-events: none;
+        }
+
+        .rain-drop-2 {
+            position: fixed;
+            top: -10%;
+            left: 60%;
+            width: 2px;
+            height: 50px;
+            background: rgba(200, 225, 255, 0.35);
+            animation: fallRain 2.5s linear infinite 0.7s;
+            pointer-events: none;
+        }
+
+        .rain-drop-3 {
+            position: fixed;
+            top: -10%;
+            left: 80%;
+            width: 2px;
+            height: 35px;
+            background: rgba(200, 225, 255, 0.3);
+            animation: fallRain 1.8s linear infinite 1.2s;
+            pointer-events: none;
+        }
+
+        @keyframes fallRain {
+            0% { top: -10%; opacity: 1; }
+            100% { top: 100%; opacity: 0.2; }
+        }
+
+        /* 3. GLOWING SUN EFFECT BEHIND CLOUDS */
+        .sun-glow {
+            position: fixed;
+            top: 40px;
+            right: 120px;
+            width: 110px;
+            height: 110px;
+            background: radial-gradient(circle, rgba(255,223,0,0.8) 0%, rgba(255,165,0,0.2) 60%, rgba(0,0,0,0) 100%);
+            border-radius: 50%;
+            box-shadow: 0 0 50px rgba(255,223,0,0.5);
+            pointer-events: none;
+            z-index: 0;
+            animation: pulseSun 4s ease-in-out infinite alternate;
+        }
+
+        @keyframes pulseSun {
+            0% { transform: scale(0.95); opacity: 0.7; }
+            100% { transform: scale(1.08); opacity: 1; }
+        }
         </style>
+        
         <div class="cloud-1"></div>
         <div class="cloud-2"></div>
+        <div class="rain-drop-1"></div>
+        <div class="rain-drop-2"></div>
+        <div class="rain-drop-3"></div>
+        <div class="sun-glow"></div>
     """, unsafe_allow_html=True)
 
-    st.title("🌐 Real-Time Pakistan & Global Weather Insights Dashboard")
-    st.markdown("Automated **ETL Data Pipeline** with Pydantic Validation, SQLite Persistence, and EDA.")
-
-    # --- SESSION STATE FOR USER PRIVACY & CITY SELECTION ---
+    # --- SESSION STATES ---
     if "user_searched_records" not in st.session_state:
         st.session_state.user_searched_records = pd.DataFrame()
 
     if "selected_cities_list" not in st.session_state:
         st.session_state.selected_cities_list = ["Islamabad", "Karachi", "Lahore", "London", "New York"]
+
+    if "user_logged_in" not in st.session_state:
+        st.session_state.user_logged_in = False
+
+    if "logged_user_email" not in st.session_state:
+        st.session_state.logged_user_email = ""
 
     # Comprehensive Raw Cities List
     raw_cities = [
@@ -189,60 +255,109 @@ def main():
         "Sydney", "Melbourne", "Brisbane", "Cairo", "Cape Town", "Tehran", "Kabul"
     ]
 
-    # Remove duplicates and SORT ALPHABETICALLY (A -> Z)
     sorted_cities = sorted(list(dict.fromkeys(raw_cities)))
-
-    # Sidebar Configurations
-    st.sidebar.header("Pipeline Configurations")
-    
-    # Optional User Name Field (Default Empty)
-    user_name_input = st.sidebar.text_input("👤 Enter Your Name (Optional):", value="")
-    current_display_name = user_name_input.strip() if user_name_input.strip() else "Guest_User"
-
     api_key = "96df70f062038652685b4a200ede92cc"
 
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("🔍 City Selection Engine")
+    # ==========================================
+    # SIDEBAR: PROFESSIONAL WEBSITE MENU
+    # ==========================================
+    st.sidebar.title("⚙️ Portal Navigation")
 
-    # 1. SEARCH BAR WITH DROPDOWN LIST
-    searched_city = st.sidebar.selectbox(
-        "Search and Add City to Container:",
+    # 1. ACCOUNT MANAGEMENT (SIGN UP / SIGN IN)
+    st.sidebar.subheader("👤 Account Management")
+    if not st.session_state.user_logged_in:
+        auth_choice = st.sidebar.radio("Account Access:", ["Sign In", "Sign Up"])
+        user_email = st.sidebar.text_input("Email Address:", placeholder="user@example.com")
+        user_pass = st.sidebar.text_input("Password:", type="password")
+
+        if auth_choice == "Sign Up":
+            if st.sidebar.button("Create Account"):
+                if user_email and user_pass:
+                    st.session_state.user_logged_in = True
+                    st.session_state.logged_user_email = user_email
+                    st.sidebar.success("Account created successfully!")
+                    st.rerun()
+                else:
+                    st.sidebar.error("Please fill all credentials.")
+        else:
+            if st.sidebar.button("Login"):
+                if user_email:
+                    st.session_state.user_logged_in = True
+                    st.session_state.logged_user_email = user_email
+                    st.sidebar.success("Logged in successfully!")
+                    st.rerun()
+                else:
+                    st.sidebar.error("Enter valid email.")
+    else:
+        st.sidebar.info(f"Logged in as:\n**{st.session_state.logged_user_email}**")
+        if st.sidebar.button("Sign Out"):
+            st.session_state.user_logged_in = False
+            st.session_state.logged_user_email = ""
+            st.rerun()
+
+    st.sidebar.markdown("---")
+
+    # 2. APP SETTINGS & THEMES
+    st.sidebar.subheader("🎨 Customization Settings")
+    selected_theme = st.sidebar.selectbox("App Color Theme:", ["Dark Blue Storm", "Midnight Dark", "Sunny Blue"])
+    zoom_level = st.sidebar.select_slider("Text Zoom Level:", options=["90%", "100%", "110%", "120%"], value="100%")
+
+    st.sidebar.markdown("---")
+
+    # 3. ADMIN PANEL
+    st.sidebar.subheader("🔒 Admin Controls")
+    admin_password = st.sidebar.text_input("Enter Admin Password", type="password")
+
+
+    # ==========================================
+    # MAIN CENTER PAGE (CHROME STYLE LAYOUT)
+    # ==========================================
+    st.title("🌐 Real-Time Pakistan & Global Weather Insights")
+    st.markdown("Automated **ETL Data Pipeline** with Pydantic Validation, SQLite Persistence, and EDA.")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # CENTER SECTION 1: NAME INPUT FIELD
+    default_name_val = st.session_state.logged_user_email if st.session_state.user_logged_in else ""
+    user_name_input = st.text_input("👤 Enter Your Name (Optional):", value=default_name_val, placeholder="e.g. Ali Zain Idrees")
+    current_display_name = user_name_input.strip() if user_name_input.strip() else ("Guest_User" if not st.session_state.logged_user_email else st.session_state.logged_user_email)
+
+    # CENTER SECTION 2: GOOGLE CHROME STYLE SEARCH BAR
+    st.subheader("🔍 Search and Select Cities")
+    
+    searched_city = st.selectbox(
+        "Search city from A-Z list:",
         options=["-- Type or Select City --"] + sorted_cities,
         index=0
     )
 
-    # Automatically add searched city to selected container
     if searched_city != "-- Type or Select City --" and searched_city not in st.session_state.selected_cities_list:
         st.session_state.selected_cities_list.append(searched_city)
 
-    # 2. SELECTED CITIES CONTAINER (Only displays selected cities, dropdown menu disabled)
-    selected_cities = st.sidebar.multiselect(
+    # CENTER SECTION 3: CONTAINER FOR SELECTED CITIES
+    selected_cities = st.multiselect(
         "📦 Selected Cities Container:",
         options=st.session_state.selected_cities_list,
         default=st.session_state.selected_cities_list
     )
-    # Sync manual removals from container
     st.session_state.selected_cities_list = selected_cities
 
-    # User-Friendly Action Button
-    run_pipeline_btn = st.sidebar.button("Show Weather 🌤️")
+    # ACTION BUTTON
+    st.markdown("<br>", unsafe_allow_html=True)
+    run_pipeline_btn = st.button("Show Weather 🌤️", use_container_width=True)
 
-    # Execution Trigger
+    # EXECUTION
     if run_pipeline_btn:
-        if not api_key:
-            st.sidebar.error("Please enter a valid OpenWeatherMap API Key!")
-        elif not selected_cities:
-            st.sidebar.error("Please select at least one city in the container!")
+        if not selected_cities:
+            st.error("Please select at least one city in the container!")
         else:
             with st.spinner("Fetching Weather Data..."):
                 raw_payloads = extract_weather_data(selected_cities, api_key)
                 cleaned_df = transform_and_validate_data(raw_payloads, current_display_name)
 
                 if not cleaned_df.empty:
-                    # Save to back-end SQLite Master History
                     load_data_to_storage(cleaned_df)
                     
-                    # Update User Session State
                     if st.session_state.user_searched_records.empty:
                         st.session_state.user_searched_records = cleaned_df
                     else:
@@ -253,20 +368,18 @@ def main():
                     st.error("No valid weather records were processed.")
 
     st.markdown("---")
-    st.header("📊 Exploratory Data Analysis & Personal Records")
 
-    # --- 1. USER PERSONAL RECORD VIEW ---
+    # DISPLAY RECORDS AND ANALYTICS
+    st.header("📊 Exploratory Data Analysis & Personal Records")
     st.subheader(f"📋 Recent Weather Records for: {current_display_name}")
     
     if not st.session_state.user_searched_records.empty:
         st.dataframe(st.session_state.user_searched_records, use_container_width=True)
         
-        # Clear Screen Record Button
         if st.button("🗑️ Clear My Screen Records"):
             st.session_state.user_searched_records = pd.DataFrame()
             st.rerun()
 
-        # Visualizations (EDA)
         st.subheader("Visual Climate Analytics (Your Searched Data)")
         col1, col2 = st.columns(2)
 
@@ -286,16 +399,10 @@ def main():
             plt.ylabel("Humidity (%)")
             plt.xticks(rotation=45, ha='right')
             st.pyplot(fig2)
-
     else:
         st.info("No records on your screen right now. Select cities and click 'Show Weather 🌤️' to view your results.")
 
-
-    # --- 2. ADMIN ACCESS PANEL ---
-    st.sidebar.markdown("---")
-    st.sidebar.header("🔒 Admin Panel")
-    admin_password = st.sidebar.text_input("Enter Admin Password", type="password")
-
+    # ADMIN VIEW
     if admin_password == "ali123":
         st.markdown("---")
         st.header("👑 Admin View: User-Wise Categorized Records")
