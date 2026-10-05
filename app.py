@@ -154,9 +154,6 @@ def main():
     if "logged_user_email" not in st.session_state:
         st.session_state.logged_user_email = ""
 
-    if "user_avatar" not in st.session_state:
-        st.session_state.user_avatar = "👤"
-
     if "stored_profiles" not in st.session_state:
         st.session_state.stored_profiles = {}
 
@@ -260,153 +257,117 @@ def main():
     # ==========================================
     # TOP HEADER NAVIGATION BAR (Chrome Style)
     # ==========================================
-    header_col1, header_col2, header_col3, header_col4, header_col5 = st.columns([4, 1.3, 1.3, 1.1, 0.5])
+    header_col1, header_col2, header_col3, header_col4 = st.columns([5, 1.5, 0.6, 0.6])
 
     with header_col1:
         st.markdown("### 🌤️ **Weather Insights**")
 
     with header_col2:
         if st.button("📥 Install App", key="install_btn"):
-            st.info("💡 **Windows Desktop Installation:** Click the **3 dots ⋮** at top right of Chrome -> Select **'Save and share'** -> Click **'Install Weather Insights'** to run as a native desktop app!")
+            st.info("💡 **Install App:** Click 3 dots ⋮ on your browser -> 'Save and share' -> 'Install Weather Insights'.")
 
+    # ICON 1: ACCOUNT AVATAR ICON (Circle with A or G)
     with header_col3:
-        current_user_display = st.session_state.logged_user_email.split('@')[0] if st.session_state.user_logged_in else "Guest"
-        account_label = f"{st.session_state.user_avatar} {current_user_display}"
-        account_popover = st.popover(account_label)
+        if st.session_state.user_logged_in and st.session_state.logged_user_email:
+            avatar_letter = st.session_state.logged_user_email[0].upper()
+        else:
+            avatar_letter = "G"
+
+        account_popover = st.popover(f"🔵 **{avatar_letter}**")
         
         with account_popover:
-            st.markdown("#### **Weather Insights Account**")
+            st.markdown("#### **Account Settings**")
             
             if not st.session_state.user_logged_in:
-                st.info("Sign in to sync your search history.")
-                user_email_input = st.text_input("Email Address", placeholder="user@example.com")
-                user_pass_input = st.text_input("Password", type="password")
-                
-                col_a, col_b = st.columns(2)
-                with col_a:
-                    if st.button("Sign In"):
-                        if user_email_input:
+                tab_signin, tab_signup = st.tabs(["🔑 Sign In", "📝 Sign Up"])
+
+                with tab_signin:
+                    if st.session_state.stored_profiles:
+                        st.caption("Select from previously registered emails:")
+                        selected_saved_email = st.selectbox("Saved Email Accounts:", options=list(st.session_state.stored_profiles.keys()))
+                        saved_pass_input = st.text_input("Password", type="password", key="saved_pass")
+                        if st.button("Sign In with Saved Account"):
+                            if saved_pass_input == st.session_state.stored_profiles.get(selected_saved_email):
+                                st.session_state.user_logged_in = True
+                                st.session_state.logged_user_email = selected_saved_email
+                                st.toast(f"Welcome back, {selected_saved_email}!", icon="✅")
+                                st.rerun()
+                            else:
+                                st.error("Incorrect password!")
+                    else:
+                        st.info("No saved accounts found. Please Sign Up first.")
+                        user_email_input = st.text_input("Email Address", placeholder="user@example.com", key="login_email")
+                        user_pass_input = st.text_input("Password", type="password", key="login_pass")
+                        if st.button("Sign In"):
+                            if user_email_input:
+                                st.session_state.user_logged_in = True
+                                st.session_state.logged_user_email = user_email_input
+                                st.session_state.stored_profiles[user_email_input] = user_pass_input
+                                st.rerun()
+
+                with tab_signup:
+                    new_user_email = st.text_input("Enter Email for New Account", placeholder="newuser@example.com", key="signup_email")
+                    new_user_pass = st.text_input("Create Password", type="password", key="signup_pass")
+                    if st.button("Create Account & Sign In"):
+                        if new_user_email and new_user_pass:
+                            st.session_state.stored_profiles[new_user_email] = new_user_pass
                             st.session_state.user_logged_in = True
-                            st.session_state.logged_user_email = user_email_input
-                            st.session_state.stored_profiles[user_email_input] = user_pass_input
+                            st.session_state.logged_user_email = new_user_email
+                            st.success("Account registered and signed in successfully!")
                             st.rerun()
-                with col_b:
-                    if st.button("Sign Up"):
-                        if user_email_input:
-                            st.session_state.user_logged_in = True
-                            st.session_state.logged_user_email = user_email_input
-                            st.session_state.stored_profiles[user_email_input] = user_pass_input
-                            st.rerun()
+                        else:
+                            st.error("Please enter email and password.")
+
             else:
                 st.success(f"Logged in as: **{st.session_state.logged_user_email}**")
                 
-                with st.expander("⚙️ Manage Your Weather Insights Account"):
+                with st.expander("⚙️ Profile Settings"):
                     new_email = st.text_input("Update Email", value=st.session_state.logged_user_email)
-                    if st.button("Save Profile Settings"):
+                    if st.button("Save Profile"):
                         st.session_state.logged_user_email = new_email
-                        st.toast("Profile details saved!", icon="✅")
+                        st.toast("Profile updated!", icon="✅")
                         st.rerun()
 
-                with st.expander("🎨 Customize Profile"):
-                    chosen_avatar = st.selectbox("Choose Profile Avatar:", ["👤", "🌤️", "⚡", "👨‍‍💻", "🦅", "🔥"])
+                with st.expander("🎨 App Theme"):
                     chosen_theme = st.selectbox("Select Theme:", ["Dark Cosmic Blue", "Sunny Day Blue", "Slate Grey Professional"])
-                    if st.button("Apply Theme & Avatar"):
-                        st.session_state.user_avatar = chosen_avatar
+                    if st.button("Apply Theme"):
                         st.session_state.app_theme = chosen_theme
-                        st.toast("Theme and Avatar Updated!", icon="🎨")
+                        st.toast("Theme updated!", icon="🎨")
                         st.rerun()
-
-                if st.button("👥 Open Guest Profile"):
-                    st.session_state.user_logged_in = False
-                    st.session_state.logged_user_email = "Guest_User"
-                    st.toast("Switched to clean Guest Profile!", icon="👤")
-                    st.rerun()
-
-                with st.expander("🛠️ Manage Profiles (Switch / Remove)"):
-                    if st.session_state.stored_profiles:
-                        st.write("**Stored Accounts:**")
-                        for prof_email in list(st.session_state.stored_profiles.keys()):
-                            p_col1, p_col2 = st.columns([2, 1])
-                            p_col1.write(prof_email)
-                            if p_col2.button("Switch", key=f"switch_{prof_email}"):
-                                st.session_state.logged_user_email = prof_email
-                                st.session_state.user_logged_in = True
-                                st.rerun()
-                    else:
-                        st.caption("No other accounts registered.")
 
                 st.markdown("---")
-                if st.button("🚪 Sign Out of Weather Insights"):
+                if st.button("🚪 Sign Out"):
                     st.session_state.user_logged_in = False
                     st.session_state.logged_user_email = ""
                     st.rerun()
 
+    # ICON 2: THREE DOTS MENU (⋮)
     with header_col4:
-        # Three Dots "⋮" Menu
-        menu_popover = st.popover("⋮ Menu")
+        menu_popover = st.popover("⋮")
         with menu_popover:
-            st.markdown("#### **Browser Navigation**")
-            if st.button("📜 History"):
-                st.session_state.active_view = "history"
-                st.rerun()
-            if st.button("📥 Downloads / Export Data"):
-                st.session_state.active_view = "downloads"
-                st.rerun()
+            st.markdown("#### **Menu**")
             if st.button("🏠 Main Dashboard"):
                 st.session_state.active_view = "main"
                 st.rerun()
+            if st.button("📜 History"):
+                st.session_state.active_view = "history"
+                st.rerun()
+            if st.button("📥 Downloads"):
+                st.session_state.active_view = "downloads"
+                st.rerun()
+            
             st.markdown("---")
 
-            # ----------------------------------------------------
-            # DUAL / TRIPLE DELETE & BACKUP OPTIONS POPUP
-            # ----------------------------------------------------
-            with st.expander("🗑️️ Delete & Backup Data Controls"):
-                st.caption("Choose how you want to handle your data:")
-                
-                # OPTION 1: Temporary Remove (Default Behavior)
-                if st.button("🧹 Clear Screen Data (Temporary)"):
-                    st.session_state.user_searched_records = pd.DataFrame()
-                    st.toast("Screen view cleared! Server data remains untouched.", icon="🧹")
-                    st.rerun()
-
-                # OPTION 2: Restore / Backup Data
-                if st.button("🔄 Restore / Backup Data to Screen"):
-                    df_historical = fetch_historical_db_data()
-                    if not df_historical.empty:
-                        curr_user = st.session_state.logged_user_email if st.session_state.user_logged_in else "Guest_User"
-                        if "user_name" in df_historical.columns:
-                            filtered_user_df = df_historical[df_historical["user_name"] == curr_user]
-                            if not filtered_user_df.empty:
-                                st.session_state.user_searched_records = filtered_user_df
-                            else:
-                                st.session_state.user_searched_records = df_historical
-                        else:
-                            st.session_state.user_searched_records = df_historical
-                        st.toast("Backup data successfully restored to screen!", icon="🔄")
-                        st.rerun()
-                    else:
-                        st.warning("No backup data available in database.")
-
-                # OPTION 3: Permanent Delete (Admin Only Guard)
-                st.markdown("---")
-                st.markdown("**🔥 Permanent Database Deletion**")
-                admin_del_pass = st.text_input("Enter Admin Password for Permanent Delete:", type="password", key="perm_del_pass")
-                if st.button("🔥 Delete Permanently From Server"):
-                    if admin_del_pass == "ali123":
-                        delete_all_data_from_db()
-                        st.session_state.user_searched_records = pd.DataFrame()
-                        st.success("All data permanently deleted from server database!")
-                        st.rerun()
-                    else:
-                        st.error("Incorrect Admin Password! Permanent deletion denied.")
-
-    with header_col5:
-        st.markdown("⭐")
+            # Simple Delete Button for Users
+            if st.button("🗑 Delete Browsing Data"):
+                st.session_state.user_searched_records = pd.DataFrame()
+                st.toast("Browsing data cleared from screen!", icon="🧹")
+                st.rerun()
 
     st.markdown("---")
 
     # ==========================================
-    # SIDEBAR: ADMIN PANEL
+    # SIDEBAR: ADMIN PANEL (FOR RESTORE / PERMANENT DELETE)
     # ==========================================
     st.sidebar.title("🔒 Security & Admin Panel")
     admin_password = st.sidebar.text_input("Enter Admin Password", type="password")
@@ -417,7 +378,7 @@ def main():
 
     # --- VIEW 1: HISTORY TAB ---
     if st.session_state.active_view == "history":
-        st.header("📜 Weather Insights - Search History")
+        st.header("📜 Search History")
         st.caption("All historical weather queries logged across sessions.")
         
         df_historical = fetch_historical_db_data()
@@ -432,7 +393,7 @@ def main():
 
     # --- VIEW 2: DOWNLOADS TAB ---
     elif st.session_state.active_view == "downloads":
-        st.header("📥 Weather Insights - Downloads & Export")
+        st.header("📥 Downloads & Data Export")
         st.caption("Export search records into clean CSV format.")
         
         if not st.session_state.user_searched_records.empty:
@@ -543,45 +504,31 @@ def main():
             st.info("No records on your screen right now. Select cities and click 'Show Weather 🌤️' to view your results.")
 
     # ==========================================
-    # ADMIN PANEL VIEW
+    # ADMIN PANEL VIEW (RESTORE & PERMANENT DELETE CONTROLS)
     # ==========================================
     if admin_password == "ali123":
         st.markdown("---")
-        st.header("👑 Admin Panel: Database Management & Permanent Delete")
-        st.warning("Admin Access Granted: Perform permanent server deletions and manage all user records.")
+        st.header("👑 Admin Panel: Database & Backup Management")
+        st.warning("Admin Access Granted")
 
-        df_historical = fetch_historical_db_data()
-
-        if not df_historical.empty and "user_name" in df_historical.columns:
-            all_users = list(df_historical["user_name"].unique())
-
-            st.subheader("🗑️ Permanently Delete Specific User Data from Database")
-            selected_user_to_delete = st.selectbox("Select User Profile to Delete:", options=["-- Select User --"] + all_users)
-
-            col_del1, col_del2 = st.columns([2, 2])
-            with col_del1:
-                if st.button(f"🔥 Permanently Delete Data for '{selected_user_to_delete}'"):
-                    if selected_user_to_delete != "-- Select User --":
-                        delete_user_data_from_db(selected_user_to_delete)
-                        st.success(f"Data for user '{selected_user_to_delete}' permanently purged from server database!")
-                        st.rerun()
-                    else:
-                        st.error("Please select a valid user to delete.")
-
-            with col_del2:
-                if st.button("💥 PERMANENTLY DELETE ALL DATABASE RECORDS"):
-                    delete_all_data_from_db()
-                    st.success("All database records cleared permanently!")
+        col_adm1, col_adm2 = st.columns(2)
+        
+        with col_adm1:
+            if st.button("🔄 Restore All Database Backup to Screen"):
+                df_historical = fetch_historical_db_data()
+                if not df_historical.empty:
+                    st.session_state.user_searched_records = df_historical
+                    st.success("All historical database records restored to screen!")
                     st.rerun()
+                else:
+                    st.warning("No records in database to restore.")
 
-            st.markdown("---")
-            st.subheader("📋 Stored Database Records by User Profile")
-            for user in all_users:
-                user_df = df_historical[user_historical["user_name"] == user] if "user_name" in df_historical.columns else df_historical
-                with st.expander(f"👤 User Profile: {user} ({len(user_df)} Entries)", expanded=True):
-                    st.dataframe(user_df, use_container_width=True)
-        else:
-            st.info("Database is currently empty.")
+        with col_adm2:
+            if st.button("🔥 Permanently Purge All Server Data"):
+                delete_all_data_from_db()
+                st.session_state.user_searched_records = pd.DataFrame()
+                st.success("Server database and CSV records permanently deleted!")
+                st.rerun()
 
 
 if __name__ == "__main__":
