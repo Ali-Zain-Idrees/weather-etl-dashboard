@@ -108,6 +108,10 @@ def main():
     st.title("🌐 Real-Time Pakistan & Global Weather Insights Dashboard")
     st.markdown("Automated **ETL Data Pipeline** with Pydantic Validation, SQLite Persistence, and EDA.")
 
+    # --- SESSION STATE FOR USER SPECIFIC PRIVACY ---
+    if "user_searched_records" not in st.session_state:
+        st.session_state.user_searched_records = pd.DataFrame()
+
     # Comprehensive Raw Cities List
     raw_cities = [
         # --- PAKISTAN (Districts & Major Cities) ---
@@ -137,7 +141,6 @@ def main():
 
     # Sidebar Configurations
     st.sidebar.header("Pipeline Configurations")
-    #api_key = st.sidebar.text_input("OpenWeatherMap API Key", type="password")
     api_key = "96df70f062038652685b4a200ede92cc"
 
     st.sidebar.markdown("🔍 **Search or Select Cities Below:**")
@@ -161,31 +164,41 @@ def main():
                 cleaned_df = transform_and_validate_data(raw_payloads)
 
                 if not cleaned_df.empty:
+                    # 1. Back-end SQLite Database mein record save karna (Master History)
                     load_data_to_storage(cleaned_df)
+                    
+                    # 2. User ki apni private screen session state ko update karna
+                    if st.session_state.user_searched_records.empty:
+                        st.session_state.user_searched_records = cleaned_df
+                    else:
+                        st.session_state.user_searched_records = pd.concat([cleaned_df, st.session_state.user_searched_records], ignore_index=True)
+
                     st.success(f"ETL Pipeline successfully processed and saved {len(cleaned_df)} city records!")
-                    st.subheader("Newly Ingested Validated Data")
-                    st.dataframe(cleaned_df, use_container_width=True)
                 else:
                     st.error("No valid weather records were processed.")
 
     st.markdown("---")
-    st.header("📊 Exploratory Data Analysis & Historical Records")
+    st.header("📊 Exploratory Data Analysis & Personal Records")
 
-    # Read records from SQLite
-    df_historical = fetch_historical_db_data()
+    # --- 1. USER PERSONAL RECORD VIEW ---
+    st.subheader("📋 Your Recent Searches (Private View)")
+    
+    if not st.session_state.user_searched_records.empty:
+        st.dataframe(st.session_state.user_searched_records, use_container_width=True)
+        
+        # Clear Record Button for the User
+        if st.button("🗑️️ Clear My Screen Records"):
+            st.session_state.user_searched_records = pd.DataFrame()
+            st.rerun()
 
-    if not df_historical.empty:
-        st.subheader("Raw Storage Records (SQLite Database)")
-        st.dataframe(df_historical.tail(25), use_container_width=True)
-
-        # Visualizations (EDA)
-        st.subheader("Visual Climate Analytics")
+        # Visualizations (EDA) for current user searches
+        st.subheader("Visual Climate Analytics (Your Searched Data)")
         col1, col2 = st.columns(2)
 
         with col1:
             st.markdown("#### Temperature Distribution by City (°C)")
             fig1, ax1 = plt.subplots(figsize=(10, 5))
-            sns.barplot(data=df_historical.tail(20), x="city", y="temperature_celsius", ax=ax1, palette="mako")
+            sns.barplot(data=st.session_state.user_searched_records.head(20), x="city", y="temperature_celsius", ax=ax1, palette="mako")
             plt.xticks(rotation=45, ha='right')
             plt.ylabel("Temperature (°C)")
             st.pyplot(fig1)
@@ -193,14 +206,34 @@ def main():
         with col2:
             st.markdown("#### Humidity Levels Across Target Cities (%)")
             fig2, ax2 = plt.subplots(figsize=(10, 5))
-            sns.scatterplot(data=df_historical.tail(20), x="temperature_celsius", y="humidity", hue="city", s=150, ax=ax2)
+            sns.scatterplot(data=st.session_state.user_searched_records.head(20), x="temperature_celsius", y="humidity", hue="city", s=150, ax=ax2)
             plt.xlabel("Temperature (°C)")
             plt.ylabel("Humidity (%)")
             plt.xticks(rotation=45, ha='right')
             st.pyplot(fig2)
 
     else:
-        st.info("No historical database records found yet. Enter your API Key and click 'Run ETL Pipeline' to populate data.")
+        st.info("No records on your screen right now. Select cities and click 'Run ETL Pipeline' to view your results.")
+
+
+    # --- 2. ADMIN ACCESS PANEL (SIDEBAR & MAIN VIEW) ---
+    st.sidebar.markdown("---")
+    st.sidebar.header("🔒 Admin Panel")
+    admin_password = st.sidebar.text_input("Enter Admin Password", type="password")
+
+    # Aap apna password yahan change kar sakte hain (default rakha hai: 'ali123')
+    if admin_password == "ali123":
+        st.markdown("---")
+        st.header("👑 Admin View: Master SQLite Database Records")
+        st.warning("Admin Mode Active: Showing complete stored historical records across all user sessions.")
+        
+        df_historical = fetch_historical_db_data()
+        
+        if not df_historical.empty:
+            st.dataframe(df_historical, use_container_width=True)
+            st.markdown(f"**Total Records Stored in Master DB:** {len(df_historical)}")
+        else:
+            st.info("Database is currently empty.")
 
 
 if __name__ == "__main__":
