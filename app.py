@@ -12,6 +12,7 @@ import streamlit as st
 # 1. DATA VALIDATION ENGINE (Pydantic Model)
 # ==========================================
 class WeatherDataModel(BaseModel):
+    user_name: str = Field(default="Guest_User", description="User identifier")
     city: str = Field(..., description="City name")
     temperature_celsius: float = Field(..., description="Temperature in Celsius")
     humidity: int = Field(..., ge=0, le=100, description="Humidity percentage")
@@ -40,7 +41,7 @@ def extract_weather_data(cities: list, api_key: str) -> list:
     return raw_data_list
 
 
-def transform_and_validate_data(raw_data_list: list) -> pd.DataFrame:
+def transform_and_validate_data(raw_data_list: list, user_name: str) -> pd.DataFrame:
     """Validate JSON payload using Pydantic and transform Kelvin to Celsius."""
     validated_records = []
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -56,6 +57,7 @@ def transform_and_validate_data(raw_data_list: list) -> pd.DataFrame:
             desc = raw_item["weather"][0]["description"].title()
 
             record_obj = WeatherDataModel(
+                user_name=user_name if user_name.strip() else "Guest_User",
                 city=city_name,
                 temperature_celsius=temp_celsius,
                 humidity=humidity_val,
@@ -105,6 +107,37 @@ def fetch_historical_db_data(db_name="weather_history.db") -> pd.DataFrame:
 # ==========================================
 def main():
     st.set_page_config(page_title="Pakistan & Global Weather Pipeline", layout="wide")
+
+    # --- ANIMATED BACKGROUND CSS (Clouds & Weather Effects) ---
+    st.markdown("""
+        <style>
+        .stApp {
+            background: linear-gradient(to bottom, #0f2027, #203a43, #2c5364);
+            color: #ffffff;
+        }
+        
+        /* Subtle Weather Overlay Effects */
+        @keyframes move-clouds {
+            0% { background-position: 0 0; }
+            100% { background-position: 1000px 0; }
+        }
+        
+        .animated-weather-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.15;
+            background: url('https://www.transparenttextures.com/patterns/clouds.png') repeat-x;
+            animation: move-clouds 60s linear infinite;
+        }
+        </style>
+        <div class="animated-weather-bg"></div>
+    """, unsafe_allow_html=True)
+
     st.title("🌐 Real-Time Pakistan & Global Weather Insights Dashboard")
     st.markdown("Automated **ETL Data Pipeline** with Pydantic Validation, SQLite Persistence, and EDA.")
 
@@ -141,12 +174,28 @@ def main():
 
     # Sidebar Configurations
     st.sidebar.header("Pipeline Configurations")
+    
+    # User Profile Section
+    user_name_input = st.sidebar.text_input("👤 Enter Your Name:", value="Ali Zain Idrees")
+    
     api_key = "96df70f062038652685b4a200ede92cc"
 
-    st.sidebar.markdown("🔍 **Search or Select Cities Below:**")
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("🔍 City Selection Engine")
+    
+    # Separate Search Box
+    search_query = st.sidebar.text_input("Type to filter city list:", placeholder="Search city name...")
+
+    # Dynamic Filtered Options
+    if search_query:
+        filtered_options = [c for c in sorted_cities if search_query.lower() in c.lower()]
+    else:
+        filtered_options = sorted_cities
+
+    # Multiselect Box holding selected cities
     selected_cities = st.sidebar.multiselect(
-        "Type city name to search (Sorted A to Z):",
-        options=sorted_cities,
+        "Selected Cities Container:",
+        options=filtered_options,
         default=["Islamabad", "Karachi", "Lahore", "London", "New York"]
     )
 
@@ -161,7 +210,7 @@ def main():
         else:
             with st.spinner("Extracting, Validating, and Storing Data..."):
                 raw_payloads = extract_weather_data(selected_cities, api_key)
-                cleaned_df = transform_and_validate_data(raw_payloads)
+                cleaned_df = transform_and_validate_data(raw_payloads, user_name_input)
 
                 if not cleaned_df.empty:
                     # 1. Back-end SQLite Database mein record save karna (Master History)
@@ -181,13 +230,13 @@ def main():
     st.header("📊 Exploratory Data Analysis & Personal Records")
 
     # --- 1. USER PERSONAL RECORD VIEW ---
-    st.subheader("📋 Your Recent Searches (Private View)")
+    st.subheader(f"📋 Recent Searches for: {user_name_input}")
     
     if not st.session_state.user_searched_records.empty:
         st.dataframe(st.session_state.user_searched_records, use_container_width=True)
         
         # Clear Record Button for the User
-        if st.button("🗑️️ Clear My Screen Records"):
+        if st.button("🗑️ Clear My Screen Records"):
             st.session_state.user_searched_records = pd.DataFrame()
             st.rerun()
 
@@ -216,22 +265,30 @@ def main():
         st.info("No records on your screen right now. Select cities and click 'Run ETL Pipeline' to view your results.")
 
 
-    # --- 2. ADMIN ACCESS PANEL (SIDEBAR & MAIN VIEW) ---
+    # --- 2. ADMIN ACCESS PANEL (USER-WISE GROUPED VIEW) ---
     st.sidebar.markdown("---")
     st.sidebar.header("🔒 Admin Panel")
     admin_password = st.sidebar.text_input("Enter Admin Password", type="password")
 
-    # Aap apna password yahan change kar sakte hain (default rakha hai: 'ali123')
     if admin_password == "ali123":
         st.markdown("---")
-        st.header("👑 Admin View: Master SQLite Database Records")
-        st.warning("Admin Mode Active: Showing complete stored historical records across all user sessions.")
+        st.header("👑 Admin View: User-Wise Categorized Records")
+        st.warning("Admin Mode Active: Displaying records grouped by individual user profiles.")
         
         df_historical = fetch_historical_db_data()
         
         if not df_historical.empty:
-            st.dataframe(df_historical, use_container_width=True)
-            st.markdown(f"**Total Records Stored in Master DB:** {len(df_historical)}")
+            # Group records by user_name
+            if "user_name" in df_historical.columns:
+                unique_users = df_historical["user_name"].unique()
+                for user in unique_users:
+                    user_df = df_historical[df_historical["user_name"] == user]
+                    with st.expander(f"👤 User Record: {user} ({len(user_df)} Entries)", expanded=True):
+                        st.dataframe(user_df, use_container_width=True)
+            else:
+                st.dataframe(df_historical, use_container_width=True)
+                
+            st.markdown(f"**Total Records Stored Across All Users:** {len(df_historical)}")
         else:
             st.info("Database is currently empty.")
 
