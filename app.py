@@ -132,6 +132,9 @@ def main():
     if "logged_user_email" not in st.session_state:
         st.session_state.logged_user_email = ""
 
+    if "user_profile_pic" not in st.session_state:
+        st.session_state.user_profile_pic = None
+
     if "stored_profiles" not in st.session_state:
         st.session_state.stored_profiles = {}
 
@@ -144,9 +147,12 @@ def main():
     if "avatar_bg_color" not in st.session_state:
         st.session_state.avatar_bg_color = "#00838f"
 
-    # FUNCTION TO GENERATE RANDOM COLOR
     def get_random_color():
-        colors = ["#e53935", "#d81b60", "#8e24aa", "#5e35b1", "#3949ab", "#1e88e5", "#039be5", "#00acc1", "#00897b", "#43a047", "#7cb342", "#f4511e", "#fb8c00"]
+        colors = [
+            "#e53935", "#d81b60", "#8e24aa", "#5e35b1", 
+            "#3949ab", "#1e88e5", "#039be5", "#00acc1", 
+            "#00897b", "#43a047", "#7cb342", "#f4511e", "#fb8c00"
+        ]
         return random.choice(colors)
 
     # --- THEME STYLING ---
@@ -160,7 +166,7 @@ def main():
         bg_style = "linear-gradient(to bottom, #09131d, #162436, #1d3557);"
         text_color = "#ffffff"
 
-    # --- CSS FOR BUTTON REMOVAL & ALIGNMENT ---
+    # --- CSS STYLING ---
     st.markdown(f"""
         <style>
         .stApp {{
@@ -168,40 +174,33 @@ def main():
             color: {text_color};
         }}
 
-        /* HIDE DOWN ARROW FROM THREE DOTS POPOVER ONLY */
-        div[data-testid="stColumn"]:nth-of-type(3) div[data-testid="stPopover"] button span span {{
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-            width: 100% !important;
-        }}
-        
+        /* HIDE DOWN ARROW FROM THREE DOTS POPOVER */
         div[data-testid="stColumn"]:nth-of-type(3) div[data-testid="stPopover"] button svg {{
             display: none !important;
         }}
 
-        /* CENTER THREE DOTS IN BOX */
-        div[data-testid="stColumn"]:nth-of-type(3) div[data-testid="stPopover"] button {{
-            display: flex !important;
-            justify-content: center !important;
-            align-items: center !important;
-            text-align: center !important;
-            padding: 0px !important;
-        }}
-
-        /* COLORFUL AVATAR CIRCLE */
-        .color-avatar-circle {{
+        /* RESPONSIVE LARGE AVATAR CIRCLE */
+        .user-avatar-circle {{
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background-color: {st.session_state.avatar_bg_color};
+            color: #ffffff;
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            width: 26px;
-            height: 26px;
-            border-radius: 50%;
-            background-color: {st.session_state.avatar_bg_color};
-            color: white;
+            font-size: 18px;
             font-weight: bold;
-            font-size: 14px;
-            margin-right: 6px;
+            background-size: cover;
+            background-position: center;
+            vertical-align: middle;
+            box-shadow: 0px 2px 5px rgba(0,0,0,0.2);
+        }}
+
+        .account-btn-container {{
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }}
 
         /* SUN GLOW EFFECT */
@@ -243,22 +242,27 @@ def main():
     # ==========================================
     # HEADER ROW
     # ==========================================
-    header_top_col1, header_top_col2, header_top_col3 = st.columns([7.0, 2.2, 0.8])
+    header_top_col1, header_top_col2, header_top_col3 = st.columns([6.8, 2.4, 0.8])
 
     with header_top_col1:
         st.markdown("### 🌤 **Weather Insights**")
 
-    # ICON 1: ACCOUNT WITH DYNAMIC COLOR CIRCLE & MANAGE ACCOUNT TEXT
+    # ICON 1: RESPONSIVE ACCOUNT AVATAR & MANAGE ACCOUNT
     with header_top_col2:
         if st.session_state.user_logged_in and st.session_state.logged_user_email:
             avatar_letter = st.session_state.logged_user_email[0].upper()
         else:
             avatar_letter = "G"
 
-        # HTML Button Label with colorful circle + letter + Manage Account
-        button_label = f"🔴 {avatar_letter}  Manage Account"
+        # Check if profile picture exists
+        if st.session_state.user_profile_pic:
+            avatar_html = f'<div class="user-avatar-circle" style="background-image: url(\'{st.session_state.user_profile_pic}\');"></div>'
+        else:
+            avatar_html = f'<div class="user-avatar-circle">{avatar_letter}</div>'
 
-        account_popover = st.popover(button_label)
+        st.markdown(f'<div class="account-btn-container">{avatar_html} <b>Manage Account</b></div>', unsafe_allow_html=True)
+        
+        account_popover = st.popover("⚙️ Account Settings")
         
         with account_popover:
             st.markdown("#### **Account Settings**")
@@ -309,10 +313,13 @@ def main():
             else:
                 st.success(f"Logged in as: **{st.session_state.logged_user_email}**")
                 
-                with st.expander("⚙️ Profile Settings"):
+                with st.expander("⚙️ Profile & Photo Settings"):
                     new_email = st.text_input("Update Email", value=st.session_state.logged_user_email)
+                    pic_url = st.text_input("Profile Picture URL (Optional):", value=st.session_state.user_profile_pic or "", placeholder="https://example.com/photo.jpg")
+                    
                     if st.button("Save Profile"):
                         st.session_state.logged_user_email = new_email
+                        st.session_state.user_profile_pic = pic_url.strip() if pic_url.strip() else None
                         st.session_state.avatar_bg_color = get_random_color()
                         st.toast("Profile updated!", icon="✅")
                         st.rerun()
@@ -328,10 +335,11 @@ def main():
                 if st.button("🚪 Sign Out"):
                     st.session_state.user_logged_in = False
                     st.session_state.logged_user_email = ""
+                    st.session_state.user_profile_pic = None
                     st.session_state.avatar_bg_color = get_random_color()
                     st.rerun()
 
-    # ICON 2: THREE DOTS (DOWN ARROW REMOVED & CENTERED)
+    # ICON 2: THREE DOTS (REVERTED BOX SIZING & HIDDEN DOWN ARROW)
     with header_top_col3:
         menu_popover = st.popover("⋮")
         with menu_popover:
