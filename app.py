@@ -119,9 +119,12 @@ def delete_all_data_from_db(db_name="weather_history.db", csv_name="cleaned_weat
 def main():
     st.set_page_config(page_title="Weather Insights", layout="wide", initial_sidebar_state="collapsed")
 
-    # --- SESSION STATES ---
+    # --- SESSION STATES INITIALIZATION ---
     if "user_searched_records" not in st.session_state:
         st.session_state.user_searched_records = pd.DataFrame()
+
+    if "last_deleted_backup" not in st.session_state:
+        st.session_state.last_deleted_backup = pd.DataFrame()
 
     if "selected_cities_list" not in st.session_state:
         st.session_state.selected_cities_list = ["Islamabad", "Karachi", "Lahore", "London", "New York"]
@@ -131,6 +134,9 @@ def main():
 
     if "logged_user_email" not in st.session_state:
         st.session_state.logged_user_email = ""
+
+    if "is_admin" not in st.session_state:
+        st.session_state.is_admin = False
 
     if "user_profile_pic" not in st.session_state:
         st.session_state.user_profile_pic = None
@@ -145,7 +151,7 @@ def main():
         st.session_state.app_theme = "Dark Cosmic Blue"
 
     if "avatar_bg_color" not in st.session_state:
-        st.session_state.avatar_bg_color = "#00838f"
+        st.session_state.avatar_bg_color = "#e53935"
 
     def get_random_color():
         colors = [
@@ -166,7 +172,13 @@ def main():
         bg_style = "linear-gradient(to bottom, #09131d, #162436, #1d3557);"
         text_color = "#ffffff"
 
-    # --- CSS STYLING ---
+    # --- CSS STYLING & MANAGE APP VISIBILITY CONTROL ---
+    manage_app_css = "" if st.session_state.is_admin else """
+        div[data-testid="stStatusWidget"], [data-testid="stToolbarActionElement"], button[title="Manage app"] {
+            display: none !important;
+        }
+    """
+
     st.markdown(f"""
         <style>
         .stApp {{
@@ -174,7 +186,9 @@ def main():
             color: {text_color};
         }}
 
-        /* HIDE DOWN ARROW FROM THREE DOTS POPOVER */
+        {manage_app_css}
+
+        /* HIDE DOWN ARROW FROM THREE DOTS POPOVER ONLY */
         div[data-testid="stColumn"]:nth-of-type(3) div[data-testid="stPopover"] button svg {{
             display: none !important;
         }}
@@ -195,30 +209,17 @@ def main():
             background-position: center;
             vertical-align: middle;
             box-shadow: 0px 2px 5px rgba(0,0,0,0.2);
+            margin-right: 8px;
         }}
 
-        .account-btn-container {{
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }}
-
-        /* SUN GLOW EFFECT */
-        .sun-glow {{
-            position: fixed;
-            top: 40px;
-            right: 35%;
-            width: 100px;
-            height: 100px;
-            background: radial-gradient(circle, rgba(255,223,0,0.6) 0%, rgba(255,165,0,0.1) 60%, rgba(0,0,0,0) 100%);
-            border-radius: 50%;
-            box-shadow: 0 0 45px rgba(255,223,0,0.3);
-            pointer-events: none;
-            z-index: 0;
+        /* WEATHER ICON COLOR STYLING */
+        .weather-sun-icon {{
+            color: #FFD700;
+            filter: drop-shadow(0 0 3px #FF8C00);
+            font-size: 24px;
+            margin-right: 6px;
         }}
         </style>
-        
-        <div class="sun-glow"></div>
     """, unsafe_allow_html=True)
 
     raw_cities = [
@@ -242,30 +243,23 @@ def main():
     # ==========================================
     # HEADER ROW
     # ==========================================
-    header_top_col1, header_top_col2, header_top_col3 = st.columns([6.8, 2.4, 0.8])
+    header_top_col1, header_top_col2, header_top_col3 = st.columns([6.5, 2.7, 0.8])
 
     with header_top_col1:
-        st.markdown("### 🌤 **Weather Insights**")
+        st.markdown('### <span class="weather-sun-icon">☀️</span>☁️ **Weather Insights**', unsafe_allow_html=True)
 
-    # ICON 1: RESPONSIVE ACCOUNT AVATAR & MANAGE ACCOUNT
+    # COMBINED MANAGE ACCOUNT & AVATAR POPOVER
     with header_top_col2:
         if st.session_state.user_logged_in and st.session_state.logged_user_email:
             avatar_letter = st.session_state.logged_user_email[0].upper()
         else:
             avatar_letter = "G"
 
-        # Check if profile picture exists
-        if st.session_state.user_profile_pic:
-            avatar_html = f'<div class="user-avatar-circle" style="background-image: url(\'{st.session_state.user_profile_pic}\');"></div>'
-        else:
-            avatar_html = f'<div class="user-avatar-circle">{avatar_letter}</div>'
-
-        st.markdown(f'<div class="account-btn-container">{avatar_html} <b>Manage Account</b></div>', unsafe_allow_html=True)
-        
-        account_popover = st.popover("⚙️ Account Settings")
+        popover_label = f"🔴 {avatar_letter}  Manage Account"
+        account_popover = st.popover(popover_label)
         
         with account_popover:
-            st.markdown("#### **Account Settings**")
+            st.markdown("#### **Account & Settings Menu**")
             
             if not st.session_state.user_logged_in:
                 tab_signin, tab_signup = st.tabs(["🔑 Sign In", "📝 Sign Up"])
@@ -280,6 +274,8 @@ def main():
                                 st.session_state.user_logged_in = True
                                 st.session_state.logged_user_email = selected_saved_email
                                 st.session_state.avatar_bg_color = get_random_color()
+                                if selected_saved_email.lower() == "ali123@gmail.com" or selected_saved_email.lower() == "admin@gmail.com":
+                                    st.session_state.is_admin = True
                                 st.toast(f"Welcome back, {selected_saved_email}!", icon="✅")
                                 st.rerun()
                             else:
@@ -336,17 +332,18 @@ def main():
                     st.session_state.user_logged_in = False
                     st.session_state.logged_user_email = ""
                     st.session_state.user_profile_pic = None
+                    st.session_state.is_admin = False
                     st.session_state.avatar_bg_color = get_random_color()
                     st.rerun()
 
-    # ICON 2: THREE DOTS (REVERTED BOX SIZING & HIDDEN DOWN ARROW)
+    # THREE DOTS MENU
     with header_top_col3:
         menu_popover = st.popover("⋮")
         with menu_popover:
             st.markdown("#### **Menu**")
             
             if st.button("📥 Install App"):
-                st.info("💡 Click 3 dots ⋮ on your browser -> 'Save and share' -> 'Install Weather Insights'.")
+                st.info("📲 App installation trigger active! On desktop browser, click 3 dots on top-right -> 'Save and share' -> 'Install Weather Insights'.")
                 
             st.markdown("---")
             if st.button("🏠 Main Dashboard"):
@@ -362,8 +359,7 @@ def main():
             st.markdown("---")
 
             if st.button("🗑 Delete Browsing Data"):
-                st.session_state.user_searched_records = pd.DataFrame()
-                st.toast("Browsing data cleared from screen!", icon="🧹")
+                st.session_state.active_view = "delete_data_view"
                 st.rerun()
 
     st.markdown("---")
@@ -373,46 +369,148 @@ def main():
     # ==========================================
     st.sidebar.title("🔒 Security & Admin Panel")
     admin_password = st.sidebar.text_input("Enter Admin Password", type="password")
+    if admin_password == "ali123":
+        st.session_state.is_admin = True
+        st.sidebar.success("Admin Mode Active")
 
     # ==========================================
-    # VIEW ROUTING
+    # VIEW ROUTING SYSTEM
     # ==========================================
 
     if st.session_state.active_view == "history":
-        st.header("📜 Search History")
-        st.caption("All historical weather queries logged across sessions.")
-        
+        st.header("📜 Search History Analytics")
         df_historical = fetch_historical_db_data()
-        if not df_historical.empty:
-            st.dataframe(df_historical, use_container_width=True)
+        
+        if st.session_state.is_admin:
+            st.success("👑 **Admin Access View**: Displaying all user histories")
+            if not df_historical.empty:
+                current_admin_name = st.session_state.logged_user_email if st.session_state.logged_user_email else "Admin"
+                admin_records = df_historical[df_historical['user_name'] == current_admin_name]
+                other_records = df_historical[df_historical['user_name'] != current_admin_name]
+
+                st.subheader(f"🏷️ Your Admin Activity ({current_admin_name})")
+                if not admin_records.empty:
+                    st.dataframe(admin_records, use_container_width=True)
+                else:
+                    st.info("No admin searches recorded yet.")
+
+                st.subheader("👥 All User & Guest Search Histories")
+                if not other_records.empty:
+                    st.dataframe(other_records, use_container_width=True)
+                else:
+                    st.info("No guest or other user searches logged.")
+            else:
+                st.info("No historical search data present in the database.")
         else:
-            st.info("No historical searches found in database.")
+            st.info("👤 **User View**: Your Recent Searches")
+            current_user_name = st.session_state.logged_user_email if st.session_state.logged_user_email else "Guest_User"
+            if not df_historical.empty:
+                user_df = df_historical[df_historical['user_name'] == current_user_name]
+                if not user_df.empty:
+                    st.dataframe(user_df, use_container_width=True)
+                else:
+                    st.info("No history records found for your account.")
+            else:
+                st.info("No history records available.")
             
         if st.button("⬅️ Back to Main Dashboard"):
             st.session_state.active_view = "main"
             st.rerun()
 
     elif st.session_state.active_view == "downloads":
-        st.header("📥 Downloads & Data Export")
-        st.caption("Export search records into clean CSV format.")
+        st.header("📥 Downloads & Data Export Center")
+        df_historical = fetch_historical_db_data()
         
-        if not st.session_state.user_searched_records.empty:
-            csv_data = st.session_state.user_searched_records.to_csv(index=False).encode('utf-8')
-            st.download_button(
-                label="📥 Download Current Session CSV",
-                data=csv_data,
-                file_name=f"weather_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv"
-            )
-            st.dataframe(st.session_state.user_searched_records, use_container_width=True)
+        if st.session_state.is_admin:
+            st.success("👑 **Admin Export Access**: All user records ready for export")
+            if not df_historical.empty:
+                csv_data_all = df_historical.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label="📥 Export Complete Server Database (CSV)",
+                    data=csv_data_all,
+                    file_name=f"all_users_weather_history_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    mime="text/csv"
+                )
+                st.dataframe(df_historical, use_container_width=True)
+            else:
+                st.info("No server data available for download.")
         else:
-            st.info("No active records available on screen to download.")
+            current_user_name = st.session_state.logged_user_email if st.session_state.logged_user_email else "Guest_User"
+            if not st.session_state.user_searched_records.empty:
+                csv_data = st.session_state.user_searched_records.to_csv(index=False).encode('utf-8')
+                st.download_button(
+                    label=f"📥 Download ({current_user_name}) Active Session CSV",
+                    data=csv_data,
+                    file_name=f"my_weather_data_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    mime="text/csv"
+                )
+                st.dataframe(st.session_state.user_searched_records, use_container_width=True)
+            else:
+                st.info("No active session records on screen to export.")
             
         if st.button("⬅️ Back to Main Dashboard"):
             st.session_state.active_view = "main"
             st.rerun()
 
-    else:
+    elif st.session_state.active_view == "delete_data_view":
+        st.header("🗑 Delete Browsing Data & System Backups")
+        
+        if st.session_state.is_admin:
+            st.subheader("👑 Admin Control Options")
+            opt = st.radio("Choose Action:", [
+                "1. Temporary Screen Clear (Current View Only)",
+                "2. Permanent Server Data Wipe (Requires Password)",
+                "3. Restore Data from Backups"
+            ])
+
+            if "1." in opt:
+                if st.button("Clear Screen View"):
+                    st.session_state.last_deleted_backup = st.session_state.user_searched_records.copy()
+                    st.session_state.user_searched_records = pd.DataFrame()
+                    st.toast("Temporary screen data cleared!", icon="🧹")
+
+            elif "2." in opt:
+                del_pass = st.text_input("Enter Admin Password for Permanent Purge:", type="password")
+                if st.button("🔥 Permanently Delete All Server Data"):
+                    if del_pass == "ali123":
+                        delete_all_data_from_db()
+                        st.session_state.user_searched_records = pd.DataFrame()
+                        st.session_state.last_deleted_backup = pd.DataFrame()
+                        st.success("All server database and CSV records permanently erased!")
+                    else:
+                        st.error("Invalid password!")
+
+            elif "3." in opt:
+                st.markdown("#### **Backup Restoration Options**")
+                col_b1, col_b2 = st.columns(2)
+                with col_b1:
+                    if st.button("🔄 Restore Last Session Deleted Batch"):
+                        if not st.session_state.last_deleted_backup.empty:
+                            st.session_state.user_searched_records = pd.concat([st.session_state.user_searched_records, st.session_state.last_deleted_backup], ignore_index=True)
+                            st.success("Last deleted batch successfully restored!")
+                        else:
+                            st.warning("No recent session backup found.")
+                with col_b2:
+                    if st.button("📦 Restore All Complete Database Records"):
+                        all_db = fetch_historical_db_data()
+                        if not all_db.empty:
+                            st.session_state.user_searched_records = all_db
+                            st.success("All-time database history restored to screen!")
+                        else:
+                            st.warning("Database is empty.")
+        else:
+            st.subheader("👤 Clear Browsing Session")
+            st.caption("Clears temporary records currently shown on your browser screen.")
+            if st.button("🧹 Clear My Screen Data"):
+                st.session_state.user_searched_records = pd.DataFrame()
+                st.toast("Screen session cleared successfully!", icon="✅")
+
+        st.markdown("<br>", unsafe_allow_html=True)
+        if st.button("⬅️ Back to Main Dashboard"):
+            st.session_state.active_view = "main"
+            st.rerun()
+
+    else: # MAIN DASHBOARD
         st.title("🌐 Real-Time Pakistan & Global Weather Insights")
         st.markdown("Automated **ETL Data Pipeline** with Pydantic Validation, SQLite Persistence, and EDA.")
 
@@ -494,31 +592,7 @@ def main():
                 plt.xticks(rotation=45, ha='right')
                 st.pyplot(fig2)
         else:
-            st.info("No records on your screen right now. Select cities and click 'Show Weather 🌤️' to view your results.")
-
-    if admin_password == "ali123":
-        st.markdown("---")
-        st.header("👑 Admin Panel: Database & Backup Management")
-        st.warning("Admin Access Granted")
-
-        col_adm1, col_adm2 = st.columns(2)
-        
-        with col_adm1:
-            if st.button("🔄 Restore All Database Backup to Screen"):
-                df_historical = fetch_historical_db_data()
-                if not df_historical.empty:
-                    st.session_state.user_searched_records = df_historical
-                    st.success("All historical database records restored to screen!")
-                    st.rerun()
-                else:
-                    st.warning("No records in database to restore.")
-
-        with col_adm2:
-            if st.button("🔥 Permanently Purge All Server Data"):
-                delete_all_data_from_db()
-                st.session_state.user_searched_records = pd.DataFrame()
-                st.success("Server database and CSV records permanently deleted!")
-                st.rerun()
+            st.info("No records on your screen right now. Select cities and click 'Show Weather 🌤️️' to view your results.")
 
 
 if __name__ == "__main__":
