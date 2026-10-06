@@ -114,7 +114,87 @@ def delete_all_data_from_db(db_name="weather_history.db", csv_name="cleaned_weat
 
 
 # ==========================================
-# 3. STREAMLIT WEB DASHBOARD
+# 3. WELCOME MODAL DIALOG
+# ==========================================
+@st.dialog("👋 Welcome to Weather Insights")
+def welcome_auth_modal():
+    st.markdown("Please **Sign In**, **Sign Up**, or continue as a guest to proceed.")
+    tab_signin, tab_signup = st.tabs(["🔑 Sign In", "📝 Sign Up"])
+
+    with tab_signin:
+        if st.session_state.stored_profiles:
+            st.caption("Select from previously saved accounts:")
+            selected_email = st.selectbox("Saved Accounts:", options=list(st.session_state.stored_profiles.keys()), key="modal_saved_email")
+            
+            if st.button("Sign In with Selected Account", use_container_width=True):
+                user_info = st.session_state.stored_profiles.get(selected_email, {})
+                st.session_state.user_logged_in = True
+                st.session_state.logged_user_email = selected_email
+                st.session_state.user_nickname = user_info.get("nickname", selected_email.split('@')[0])
+                st.session_state.auth_modal_shown = True
+                
+                # ONLY ADMIN GETS ADMIN PRIVILEGES
+                if selected_email.lower() in ["ali123@gmail.com", "admin@gmail.com"]:
+                    st.session_state.is_admin = True
+                else:
+                    st.session_state.is_admin = False
+                    
+                st.toast(f"Welcome back, {st.session_state.user_nickname}!", icon="✅")
+                st.rerun()
+        else:
+            st.info("No saved accounts found. Please Sign Up or Continue as Guest.")
+            login_email = st.text_input("Email Address", placeholder="user@example.com", key="modal_login_email")
+            login_pass = st.text_input("Password", type="password", key="modal_login_pass")
+            if st.button("Sign In", use_container_width=True):
+                if login_email:
+                    st.session_state.user_logged_in = True
+                    st.session_state.logged_user_email = login_email
+                    st.session_state.user_nickname = login_email.split('@')[0]
+                    st.session_state.stored_profiles[login_email] = {"password": login_pass, "nickname": st.session_state.user_nickname}
+                    st.session_state.auth_modal_shown = True
+                    
+                    if login_email.lower() in ["ali123@gmail.com", "admin@gmail.com"]:
+                        st.session_state.is_admin = True
+                    else:
+                        st.session_state.is_admin = False
+                        
+                    st.rerun()
+
+    with tab_signup:
+        signup_email = st.text_input("Enter Email", placeholder="newuser@example.com", key="modal_signup_email")
+        signup_nickname = st.text_input("Enter Nickname / Username (Optional)", placeholder="e.g. Ali Zain", key="modal_signup_nickname")
+        signup_pass = st.text_input("Create Password", type="password", key="modal_signup_pass")
+        
+        if st.button("Create Account & Continue", use_container_width=True):
+            if signup_email and signup_pass:
+                nick = signup_nickname.strip() if signup_nickname.strip() else signup_email.split('@')[0]
+                st.session_state.stored_profiles[signup_email] = {"password": signup_pass, "nickname": nick}
+                st.session_state.user_logged_in = True
+                st.session_state.logged_user_email = signup_email
+                st.session_state.user_nickname = nick
+                st.session_state.auth_modal_shown = True
+                
+                if signup_email.lower() in ["ali123@gmail.com", "admin@gmail.com"]:
+                    st.session_state.is_admin = True
+                else:
+                    st.session_state.is_admin = False
+                    
+                st.success("Account registered successfully!")
+                st.rerun()
+            else:
+                st.error("Please provide both email and password.")
+
+    st.markdown("---")
+    if st.button("🌐 Continue as Guest", use_container_width=True):
+        st.session_state.auth_modal_shown = True
+        st.session_state.user_logged_in = False
+        st.session_state.user_nickname = "Guest_User"
+        st.session_state.is_admin = False
+        st.rerun()
+
+
+# ==========================================
+# 4. STREAMLIT WEB DASHBOARD
 # ==========================================
 def main():
     st.set_page_config(page_title="Weather Insights", layout="wide", initial_sidebar_state="collapsed")
@@ -135,6 +215,9 @@ def main():
     if "logged_user_email" not in st.session_state:
         st.session_state.logged_user_email = ""
 
+    if "user_nickname" not in st.session_state:
+        st.session_state.user_nickname = "Guest_User"
+
     if "is_admin" not in st.session_state:
         st.session_state.is_admin = False
 
@@ -152,6 +235,13 @@ def main():
 
     if "avatar_bg_color" not in st.session_state:
         st.session_state.avatar_bg_color = "#e53935"
+
+    if "auth_modal_shown" not in st.session_state:
+        st.session_state.auth_modal_shown = False
+
+    # SHOW WELCOME MODAL ON INITIAL LOAD
+    if not st.session_state.auth_modal_shown:
+        welcome_auth_modal()
 
     def get_random_color():
         colors = [
@@ -172,9 +262,9 @@ def main():
         bg_style = "linear-gradient(to bottom, #09131d, #162436, #1d3557);"
         text_color = "#ffffff"
 
-    # --- CSS STYLING & MANAGE APP VISIBILITY CONTROL ---
-    manage_app_css = "" if st.session_state.is_admin else """
-        div[data-testid="stStatusWidget"], [data-testid="stToolbarActionElement"], button[title="Manage app"] {
+    # --- STRICT ADMIN SIDEBAR VISIBILITY CONTROL ---
+    sidebar_css = "" if st.session_state.is_admin else """
+        section[data-testid="stSidebar"] {
             display: none !important;
         }
     """
@@ -186,10 +276,18 @@ def main():
             color: {text_color};
         }}
 
-        {manage_app_css}
+        {sidebar_css}
+
+        /* MANAGE ACCOUNT & THREE DOTS GAP FIX (EXACTLY 15PX) */
+        .right-header-container {{
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 15px !important;
+        }}
 
         /* HIDE DOWN ARROW FROM THREE DOTS POPOVER ONLY */
-        div[data-testid="stColumn"]:nth-of-type(3) div[data-testid="stPopover"] button svg {{
+        div[data-testid="stColumn"]:nth-of-type(2) div[data-testid="stPopover"]:nth-of-type(2) button svg {{
             display: none !important;
         }}
 
@@ -243,135 +341,156 @@ def main():
     # ==========================================
     # HEADER ROW
     # ==========================================
-    header_top_col1, header_top_col2, header_top_col3 = st.columns([6.5, 2.7, 0.8])
+    header_col1, header_col2 = st.columns([6.2, 3.8])
 
-    with header_top_col1:
-        st.markdown('### <span class="weather-sun-icon">☀️</span>☁️ **Weather Insights**', unsafe_allow_html=True)
+    with header_col1:
+        st.markdown('### <span class="weather-sun-icon">☀️</span>☁ **Weather Insights**', unsafe_allow_html=True)
 
-    # COMBINED MANAGE ACCOUNT & AVATAR POPOVER
-    with header_top_col2:
+    # COMBINED MANAGE ACCOUNT & THREE DOTS WITH EXACT 15PX DISTANCE
+    with header_col2:
         if st.session_state.user_logged_in and st.session_state.logged_user_email:
-            avatar_letter = st.session_state.logged_user_email[0].upper()
+            avatar_letter = st.session_state.user_nickname[0].upper()
         else:
             avatar_letter = "G"
 
-        popover_label = f"🔴 {avatar_letter}  Manage Account"
-        account_popover = st.popover(popover_label)
-        
-        with account_popover:
-            st.markdown("#### **Account & Settings Menu**")
-            
-            if not st.session_state.user_logged_in:
-                tab_signin, tab_signup = st.tabs(["🔑 Sign In", "📝 Sign Up"])
+        btn_col1, btn_col2 = st.columns([3, 1])
 
-                with tab_signin:
-                    if st.session_state.stored_profiles:
-                        st.caption("Select from previously registered emails:")
-                        selected_saved_email = st.selectbox("Saved Email Accounts:", options=list(st.session_state.stored_profiles.keys()))
-                        saved_pass_input = st.text_input("Password", type="password", key="saved_pass")
-                        if st.button("Sign In with Saved Account"):
-                            if saved_pass_input == st.session_state.stored_profiles.get(selected_saved_email):
+        with btn_col1:
+            popover_label = f"🔴 {avatar_letter}  Manage Account"
+            account_popover = st.popover(popover_label)
+            
+            with account_popover:
+                st.markdown("#### **Account & Settings Menu**")
+                
+                if not st.session_state.user_logged_in:
+                    tab_signin, tab_signup = st.tabs(["🔑 Sign In", "📝 Sign Up"])
+
+                    with tab_signin:
+                        if st.session_state.stored_profiles:
+                            st.caption("Select saved account:")
+                            selected_saved_email = st.selectbox("Saved Accounts:", options=list(st.session_state.stored_profiles.keys()), key="hdr_saved_email_select")
+                            if st.button("Sign In with Selected Account"):
+                                user_info = st.session_state.stored_profiles.get(selected_saved_email, {})
                                 st.session_state.user_logged_in = True
                                 st.session_state.logged_user_email = selected_saved_email
+                                st.session_state.user_nickname = user_info.get("nickname", selected_saved_email.split('@')[0])
                                 st.session_state.avatar_bg_color = get_random_color()
-                                if selected_saved_email.lower() == "ali123@gmail.com" or selected_saved_email.lower() == "admin@gmail.com":
+                                
+                                if selected_saved_email.lower() in ["ali123@gmail.com", "admin@gmail.com"]:
                                     st.session_state.is_admin = True
-                                st.toast(f"Welcome back, {selected_saved_email}!", icon="✅")
+                                else:
+                                    st.session_state.is_admin = False
+                                    
+                                st.toast(f"Welcome back, {st.session_state.user_nickname}!", icon="✅")
+                                st.rerun()
+                        else:
+                            st.info("No saved accounts found. Please Sign Up first.")
+                            user_email_input = st.text_input("Email Address", placeholder="user@example.com", key="hdr_login_email")
+                            user_pass_input = st.text_input("Password", type="password", key="hdr_login_pass")
+                            if st.button("Sign In"):
+                                if user_email_input:
+                                    st.session_state.user_logged_in = True
+                                    st.session_state.logged_user_email = user_email_input
+                                    st.session_state.user_nickname = user_email_input.split('@')[0]
+                                    st.session_state.stored_profiles[user_email_input] = {"password": user_pass_input, "nickname": st.session_state.user_nickname}
+                                    st.session_state.avatar_bg_color = get_random_color()
+                                    
+                                    if user_email_input.lower() in ["ali123@gmail.com", "admin@gmail.com"]:
+                                        st.session_state.is_admin = True
+                                    else:
+                                        st.session_state.is_admin = False
+                                    st.rerun()
+
+                    with tab_signup:
+                        new_user_email = st.text_input("Enter Email", placeholder="newuser@example.com", key="hdr_signup_email")
+                        new_user_nickname = st.text_input("Enter Nickname (Optional)", placeholder="e.g. Ali Zain", key="hdr_signup_nickname")
+                        new_user_pass = st.text_input("Create Password", type="password", key="hdr_signup_pass")
+                        if st.button("Create Account & Sign In"):
+                            if new_user_email and new_user_pass:
+                                nick = new_user_nickname.strip() if new_user_nickname.strip() else new_user_email.split('@')[0]
+                                st.session_state.stored_profiles[new_user_email] = {"password": new_user_pass, "nickname": nick}
+                                st.session_state.user_logged_in = True
+                                st.session_state.logged_user_email = new_user_email
+                                st.session_state.user_nickname = nick
+                                st.session_state.avatar_bg_color = get_random_color()
+                                
+                                if new_user_email.lower() in ["ali123@gmail.com", "admin@gmail.com"]:
+                                    st.session_state.is_admin = True
+                                else:
+                                    st.session_state.is_admin = False
+                                    
+                                st.success("Account registered successfully!")
                                 st.rerun()
                             else:
-                                st.error("Incorrect password!")
-                    else:
-                        st.info("No saved accounts found. Please Sign Up first.")
-                        user_email_input = st.text_input("Email Address", placeholder="user@example.com", key="login_email")
-                        user_pass_input = st.text_input("Password", type="password", key="login_pass")
-                        if st.button("Sign In"):
-                            if user_email_input:
-                                st.session_state.user_logged_in = True
-                                st.session_state.logged_user_email = user_email_input
-                                st.session_state.stored_profiles[user_email_input] = user_pass_input
-                                st.session_state.avatar_bg_color = get_random_color()
-                                st.rerun()
+                                st.error("Please enter email and password.")
 
-                with tab_signup:
-                    new_user_email = st.text_input("Enter Email for New Account", placeholder="newuser@example.com", key="signup_email")
-                    new_user_pass = st.text_input("Create Password", type="password", key="signup_pass")
-                    if st.button("Create Account & Sign In"):
-                        if new_user_email and new_user_pass:
-                            st.session_state.stored_profiles[new_user_email] = new_user_pass
-                            st.session_state.user_logged_in = True
-                            st.session_state.logged_user_email = new_user_email
-                            st.session_state.avatar_bg_color = get_random_color()
-                            st.success("Account registered and signed in successfully!")
-                            st.rerun()
-                        else:
-                            st.error("Please enter email and password.")
-
-            else:
-                st.success(f"Logged in as: **{st.session_state.logged_user_email}**")
-                
-                with st.expander("⚙️ Profile & Photo Settings"):
-                    new_email = st.text_input("Update Email", value=st.session_state.logged_user_email)
-                    pic_url = st.text_input("Profile Picture URL (Optional):", value=st.session_state.user_profile_pic or "", placeholder="https://example.com/photo.jpg")
+                else:
+                    st.success(f"Logged in as: **{st.session_state.user_nickname}** ({st.session_state.logged_user_email})")
                     
-                    if st.button("Save Profile"):
-                        st.session_state.logged_user_email = new_email
-                        st.session_state.user_profile_pic = pic_url.strip() if pic_url.strip() else None
+                    with st.expander("⚙ Profile & Photo Settings"):
+                        updated_nick = st.text_input("Update Nickname", value=st.session_state.user_nickname)
+                        pic_url = st.text_input("Profile Picture URL (Optional):", value=st.session_state.user_profile_pic or "", placeholder="https://example.com/photo.jpg")
+                        
+                        if st.button("Save Profile"):
+                            st.session_state.user_nickname = updated_nick.strip()
+                            st.session_state.user_profile_pic = pic_url.strip() if pic_url.strip() else None
+                            st.session_state.avatar_bg_color = get_random_color()
+                            st.toast("Profile updated!", icon="✅")
+                            st.rerun()
+
+                    with st.expander("🎨 App Theme"):
+                        chosen_theme = st.selectbox("Select Theme:", ["Dark Cosmic Blue", "Sunny Day Blue", "Slate Grey Professional"])
+                        if st.button("Apply Theme"):
+                            st.session_state.app_theme = chosen_theme
+                            st.toast("Theme updated!", icon="🎨")
+                            st.rerun()
+
+                    st.markdown("---")
+                    if st.button("🚪 Sign Out"):
+                        st.session_state.user_logged_in = False
+                        st.session_state.logged_user_email = ""
+                        st.session_state.user_nickname = "Guest_User"
+                        st.session_state.user_profile_pic = None
+                        st.session_state.is_admin = False
                         st.session_state.avatar_bg_color = get_random_color()
-                        st.toast("Profile updated!", icon="✅")
                         st.rerun()
 
-                with st.expander("🎨 App Theme"):
-                    chosen_theme = st.selectbox("Select Theme:", ["Dark Cosmic Blue", "Sunny Day Blue", "Slate Grey Professional"])
-                    if st.button("Apply Theme"):
-                        st.session_state.app_theme = chosen_theme
-                        st.toast("Theme updated!", icon="🎨")
-                        st.rerun()
-
-                st.markdown("---")
-                if st.button("🚪 Sign Out"):
-                    st.session_state.user_logged_in = False
-                    st.session_state.logged_user_email = ""
-                    st.session_state.user_profile_pic = None
-                    st.session_state.is_admin = False
-                    st.session_state.avatar_bg_color = get_random_color()
-                    st.rerun()
-
-    # THREE DOTS MENU
-    with header_top_col3:
-        menu_popover = st.popover("⋮")
-        with menu_popover:
-            st.markdown("#### **Menu**")
-            
-            if st.button("📥 Install App"):
-                st.info("📲 App installation trigger active! On desktop browser, click 3 dots on top-right -> 'Save and share' -> 'Install Weather Insights'.")
+        with btn_col2:
+            menu_popover = st.popover("⋮")
+            with menu_popover:
+                st.markdown("#### **Menu**")
                 
-            st.markdown("---")
-            if st.button("🏠 Main Dashboard"):
-                st.session_state.active_view = "main"
-                st.rerun()
-            if st.button("📜 History"):
-                st.session_state.active_view = "history"
-                st.rerun()
-            if st.button("📥 Downloads"):
-                st.session_state.active_view = "downloads"
-                st.rerun()
-            
-            st.markdown("---")
+                if st.button("📥 Install App"):
+                    st.info("📲 App installation active! On desktop browser, click 3 dots on top-right -> 'Save and share' -> 'Install Weather Insights'.")
+                    
+                st.markdown("---")
+                if st.button("🏠 Main Dashboard"):
+                    st.session_state.active_view = "main"
+                    st.rerun()
+                if st.button("📜 History"):
+                    st.session_state.active_view = "history"
+                    st.rerun()
+                if st.button("📥 Downloads"):
+                    st.session_state.active_view = "downloads"
+                    st.rerun()
+                
+                st.markdown("---")
 
-            if st.button("🗑 Delete Browsing Data"):
-                st.session_state.active_view = "delete_data_view"
-                st.rerun()
+                if st.button("🗑 Delete Browsing Data"):
+                    st.session_state.active_view = "delete_data_view"
+                    st.rerun()
 
     st.markdown("---")
 
     # ==========================================
-    # SIDEBAR: ADMIN PANEL
+    # SIDEBAR: ADMIN PANEL (VISIBLE EXCLUSIVELY TO ADMIN)
     # ==========================================
-    st.sidebar.title("🔒 Security & Admin Panel")
-    admin_password = st.sidebar.text_input("Enter Admin Password", type="password")
-    if admin_password == "ali123":
-        st.session_state.is_admin = True
-        st.sidebar.success("Admin Mode Active")
+    if st.session_state.is_admin:
+        st.sidebar.title("🔒 Security & Admin Panel")
+        st.sidebar.success("👑 Logged in as Super Admin")
+        admin_password = st.sidebar.text_input("Enter Admin Password", type="password")
+        if admin_password == "ali123":
+            st.sidebar.info("Admin Full Unlocked")
 
     # ==========================================
     # VIEW ROUTING SYSTEM
@@ -384,7 +503,7 @@ def main():
         if st.session_state.is_admin:
             st.success("👑 **Admin Access View**: Displaying all user histories")
             if not df_historical.empty:
-                current_admin_name = st.session_state.logged_user_email if st.session_state.logged_user_email else "Admin"
+                current_admin_name = st.session_state.user_nickname
                 admin_records = df_historical[df_historical['user_name'] == current_admin_name]
                 other_records = df_historical[df_historical['user_name'] != current_admin_name]
 
@@ -400,10 +519,10 @@ def main():
                 else:
                     st.info("No guest or other user searches logged.")
             else:
-                st.info("No historical search data present in the database.")
+                st.info("No historical search data present in database.")
         else:
             st.info("👤 **User View**: Your Recent Searches")
-            current_user_name = st.session_state.logged_user_email if st.session_state.logged_user_email else "Guest_User"
+            current_user_name = st.session_state.user_nickname
             if not df_historical.empty:
                 user_df = df_historical[df_historical['user_name'] == current_user_name]
                 if not user_df.empty:
@@ -435,7 +554,7 @@ def main():
             else:
                 st.info("No server data available for download.")
         else:
-            current_user_name = st.session_state.logged_user_email if st.session_state.logged_user_email else "Guest_User"
+            current_user_name = st.session_state.user_nickname
             if not st.session_state.user_searched_records.empty:
                 csv_data = st.session_state.user_searched_records.to_csv(index=False).encode('utf-8')
                 st.download_button(
@@ -516,9 +635,7 @@ def main():
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        default_name_val = st.session_state.logged_user_email if st.session_state.user_logged_in else ""
-        user_name_input = st.text_input("👤 Enter Your Name (Optional):", value=default_name_val, placeholder="e.g. Ali Zain Idrees")
-        current_display_name = user_name_input.strip() if user_name_input.strip() else ("Guest_User" if not st.session_state.logged_user_email else st.session_state.logged_user_email)
+        current_display_name = st.session_state.user_nickname if st.session_state.user_logged_in else "Guest_User"
 
         st.subheader("🔍 Search and Select Cities")
         searched_city = st.selectbox(
@@ -592,7 +709,7 @@ def main():
                 plt.xticks(rotation=45, ha='right')
                 st.pyplot(fig2)
         else:
-            st.info("No records on your screen right now. Select cities and click 'Show Weather 🌤️️' to view your results.")
+            st.info("No records on your screen right now. Select cities and click 'Show Weather 🌤' to view your results.")
 
 
 if __name__ == "__main__":
