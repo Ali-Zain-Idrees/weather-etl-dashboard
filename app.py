@@ -1,4 +1,5 @@
 import os
+import random
 import requests
 import pandas as pd
 import sqlite3
@@ -26,7 +27,6 @@ class WeatherDataModel(BaseModel):
 # 2. ETL PIPELINE & DATABASE FUNCTIONS
 # ==========================================
 def extract_weather_data(cities: list, api_key: str) -> list:
-    """Fetch raw weather JSON payloads from OpenWeatherMap API."""
     raw_data_list = []
     for city in cities:
         url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}"
@@ -42,7 +42,6 @@ def extract_weather_data(cities: list, api_key: str) -> list:
 
 
 def transform_and_validate_data(raw_data_list: list, user_name: str) -> pd.DataFrame:
-    """Validate JSON payload using Pydantic and transform Kelvin to Celsius."""
     validated_records = []
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -77,7 +76,6 @@ def transform_and_validate_data(raw_data_list: list, user_name: str) -> pd.DataF
 
 
 def load_data_to_storage(df: pd.DataFrame, db_name="weather_history.db", csv_name="cleaned_weather.csv"):
-    """Persist cleaned records to SQLite Database and CSV file."""
     if df.empty:
         return
 
@@ -92,7 +90,6 @@ def load_data_to_storage(df: pd.DataFrame, db_name="weather_history.db", csv_nam
 
 
 def fetch_historical_db_data(db_name="weather_history.db") -> pd.DataFrame:
-    """Fetch stored historical records from SQLite Database."""
     if not os.path.exists(db_name):
         return pd.DataFrame()
     conn = sqlite3.connect(db_name)
@@ -105,7 +102,6 @@ def fetch_historical_db_data(db_name="weather_history.db") -> pd.DataFrame:
 
 
 def delete_all_data_from_db(db_name="weather_history.db", csv_name="cleaned_weather.csv"):
-    """Permanently clear all database records from server."""
     if os.path.exists(db_name):
         conn = sqlite3.connect(db_name)
         cursor = conn.cursor()
@@ -145,6 +141,14 @@ def main():
     if "app_theme" not in st.session_state:
         st.session_state.app_theme = "Dark Cosmic Blue"
 
+    if "avatar_bg_color" not in st.session_state:
+        st.session_state.avatar_bg_color = "#00838f"
+
+    # FUNCTION TO GENERATE RANDOM COLOR
+    def get_random_color():
+        colors = ["#e53935", "#d81b60", "#8e24aa", "#5e35b1", "#3949ab", "#1e88e5", "#039be5", "#00acc1", "#00897b", "#43a047", "#7cb342", "#f4511e", "#fb8c00"]
+        return random.choice(colors)
+
     # --- THEME STYLING ---
     if st.session_state.app_theme == "Sunny Day Blue":
         bg_style = "linear-gradient(to bottom, #1e3c72, #2a5298, #4a90e2);"
@@ -156,7 +160,7 @@ def main():
         bg_style = "linear-gradient(to bottom, #09131d, #162436, #1d3557);"
         text_color = "#ffffff"
 
-    # --- CUSTOM STYLING FOR CHROME-LIKE BUTTONS ---
+    # --- CSS FOR BUTTON REMOVAL & ALIGNMENT ---
     st.markdown(f"""
         <style>
         .stApp {{
@@ -164,44 +168,40 @@ def main():
             color: {text_color};
         }}
 
-        /* POPOVER BUTTON CUSTOMIZATION (CHROME STYLE) */
-        div[data-testid="stPopover"] > button {{
-            background-color: transparent !important;
-            border: none !important;
-            box-shadow: none !important;
-            color: white !important;
-            font-size: 18px !important;
-            padding: 0px !important;
-            width: 38px !important;
-            height: 38px !important;
-            border-radius: 50% !important;
+        /* HIDE DOWN ARROW FROM THREE DOTS POPOVER ONLY */
+        div[data-testid="stColumn"]:nth-of-type(3) div[data-testid="stPopover"] button span span {{
             display: flex !important;
-            align-items: center !important;
             justify-content: center !important;
-            transition: background-color 0.2s ease;
+            align-items: center !important;
+            width: 100% !important;
         }}
-
-        div[data-testid="stPopover"] > button:hover {{
-            background-color: rgba(255, 255, 255, 0.15) !important;
-        }}
-
-        /* HIDE POPOVER DROPDOWN ARROW */
-        div[data-testid="stPopover"] > button svg {{
+        
+        div[data-testid="stColumn"]:nth-of-type(3) div[data-testid="stPopover"] button svg {{
             display: none !important;
         }}
 
-        /* CUSTOM CIRCULAR AVATAR ICON */
-        .avatar-circle {{
-            width: 32px;
-            height: 32px;
-            background-color: #00838f;
-            color: white;
-            border-radius: 50%;
-            display: flex;
+        /* CENTER THREE DOTS IN BOX */
+        div[data-testid="stColumn"]:nth-of-type(3) div[data-testid="stPopover"] button {{
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            text-align: center !important;
+            padding: 0px !important;
+        }}
+
+        /* COLORFUL AVATAR CIRCLE */
+        .color-avatar-circle {{
+            display: inline-flex;
             align-items: center;
             justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background-color: {st.session_state.avatar_bg_color};
+            color: white;
             font-weight: bold;
-            font-size: 15px;
+            font-size: 14px;
+            margin-right: 6px;
         }}
 
         /* SUN GLOW EFFECT */
@@ -241,22 +241,24 @@ def main():
     api_key = "96df70f062038652685b4a200ede92cc"
 
     # ==========================================
-    # SEPARATE HEADER ROW (CHROME STYLE ICONS)
+    # HEADER ROW
     # ==========================================
-    header_top_col1, header_top_col2, header_top_col3 = st.columns([8.5, 0.75, 0.75])
+    header_top_col1, header_top_col2, header_top_col3 = st.columns([7.0, 2.2, 0.8])
 
     with header_top_col1:
         st.markdown("### 🌤 **Weather Insights**")
 
-    # ICON 1: CHROME STYLE ACCOUNT CIRCLE (A/G)
+    # ICON 1: ACCOUNT WITH DYNAMIC COLOR CIRCLE & MANAGE ACCOUNT TEXT
     with header_top_col2:
         if st.session_state.user_logged_in and st.session_state.logged_user_email:
             avatar_letter = st.session_state.logged_user_email[0].upper()
         else:
             avatar_letter = "G"
 
-        # Display clean letter inside popover button
-        account_popover = st.popover(f"{avatar_letter}")
+        # HTML Button Label with colorful circle + letter + Manage Account
+        button_label = f"🔴 {avatar_letter}  Manage Account"
+
+        account_popover = st.popover(button_label)
         
         with account_popover:
             st.markdown("#### **Account Settings**")
@@ -273,6 +275,7 @@ def main():
                             if saved_pass_input == st.session_state.stored_profiles.get(selected_saved_email):
                                 st.session_state.user_logged_in = True
                                 st.session_state.logged_user_email = selected_saved_email
+                                st.session_state.avatar_bg_color = get_random_color()
                                 st.toast(f"Welcome back, {selected_saved_email}!", icon="✅")
                                 st.rerun()
                             else:
@@ -286,6 +289,7 @@ def main():
                                 st.session_state.user_logged_in = True
                                 st.session_state.logged_user_email = user_email_input
                                 st.session_state.stored_profiles[user_email_input] = user_pass_input
+                                st.session_state.avatar_bg_color = get_random_color()
                                 st.rerun()
 
                 with tab_signup:
@@ -296,6 +300,7 @@ def main():
                             st.session_state.stored_profiles[new_user_email] = new_user_pass
                             st.session_state.user_logged_in = True
                             st.session_state.logged_user_email = new_user_email
+                            st.session_state.avatar_bg_color = get_random_color()
                             st.success("Account registered and signed in successfully!")
                             st.rerun()
                         else:
@@ -308,6 +313,7 @@ def main():
                     new_email = st.text_input("Update Email", value=st.session_state.logged_user_email)
                     if st.button("Save Profile"):
                         st.session_state.logged_user_email = new_email
+                        st.session_state.avatar_bg_color = get_random_color()
                         st.toast("Profile updated!", icon="✅")
                         st.rerun()
 
@@ -322,9 +328,10 @@ def main():
                 if st.button("🚪 Sign Out"):
                     st.session_state.user_logged_in = False
                     st.session_state.logged_user_email = ""
+                    st.session_state.avatar_bg_color = get_random_color()
                     st.rerun()
 
-    # ICON 2: CHROME STYLE THREE DOTS (⋮)
+    # ICON 2: THREE DOTS (DOWN ARROW REMOVED & CENTERED)
     with header_top_col3:
         menu_popover = st.popover("⋮")
         with menu_popover:
@@ -363,7 +370,6 @@ def main():
     # VIEW ROUTING
     # ==========================================
 
-    # --- VIEW 1: HISTORY TAB ---
     if st.session_state.active_view == "history":
         st.header("📜 Search History")
         st.caption("All historical weather queries logged across sessions.")
@@ -378,7 +384,6 @@ def main():
             st.session_state.active_view = "main"
             st.rerun()
 
-    # --- VIEW 2: DOWNLOADS TAB ---
     elif st.session_state.active_view == "downloads":
         st.header("📥 Downloads & Data Export")
         st.caption("Export search records into clean CSV format.")
@@ -399,19 +404,16 @@ def main():
             st.session_state.active_view = "main"
             st.rerun()
 
-    # --- VIEW 3: MAIN DASHBOARD VIEW ---
     else:
         st.title("🌐 Real-Time Pakistan & Global Weather Insights")
         st.markdown("Automated **ETL Data Pipeline** with Pydantic Validation, SQLite Persistence, and EDA.")
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        # CENTER SECTION 1: USER NAME
         default_name_val = st.session_state.logged_user_email if st.session_state.user_logged_in else ""
         user_name_input = st.text_input("👤 Enter Your Name (Optional):", value=default_name_val, placeholder="e.g. Ali Zain Idrees")
         current_display_name = user_name_input.strip() if user_name_input.strip() else ("Guest_User" if not st.session_state.logged_user_email else st.session_state.logged_user_email)
 
-        # CENTER SECTION 2: SEARCH BAR
         st.subheader("🔍 Search and Select Cities")
         searched_city = st.selectbox(
             "Search city from A-Z list:",
@@ -422,7 +424,6 @@ def main():
         if searched_city != "-- Type or Select City --" and searched_city not in st.session_state.selected_cities_list:
             st.session_state.selected_cities_list.append(searched_city)
 
-        # CENTER SECTION 3: SELECTED CONTAINER
         selected_cities = st.multiselect(
             "📦 Selected Cities Container:",
             options=st.session_state.selected_cities_list,
@@ -430,11 +431,9 @@ def main():
         )
         st.session_state.selected_cities_list = selected_cities
 
-        # ACTION BUTTON
         st.markdown("<br>", unsafe_allow_html=True)
         run_pipeline_btn = st.button("Show Weather 🌤", use_container_width=True)
 
-        # EXECUTION
         if run_pipeline_btn:
             if not selected_cities:
                 st.error("Please select at least one city in the container!")
@@ -457,7 +456,6 @@ def main():
 
         st.markdown("---")
 
-        # DISPLAY EDA & DATA
         st.header("📊 Exploratory Data Analysis & Personal Records")
         st.subheader(f"📋 Recent Weather Records for: {current_display_name}")
         
@@ -490,9 +488,6 @@ def main():
         else:
             st.info("No records on your screen right now. Select cities and click 'Show Weather 🌤️' to view your results.")
 
-    # ==========================================
-    # ADMIN PANEL VIEW
-    # ==========================================
     if admin_password == "ali123":
         st.markdown("---")
         st.header("👑 Admin Panel: Database & Backup Management")
