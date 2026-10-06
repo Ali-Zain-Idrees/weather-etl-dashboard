@@ -156,7 +156,7 @@ def main():
         bg_style = "linear-gradient(to bottom, #09131d, #162436, #1d3557);"
         text_color = "#ffffff"
 
-    # --- FIXED CSS TO PREVENT OVERLAPPING ---
+    # --- CUSTOM STYLING FOR CHROME-LIKE BUTTONS ---
     st.markdown(f"""
         <style>
         .stApp {{
@@ -164,13 +164,44 @@ def main():
             color: {text_color};
         }}
 
-        /* CLEAN HEADER ALIGNMENT (NO OVERLAP) */
-        .header-container {{
+        /* POPOVER BUTTON CUSTOMIZATION (CHROME STYLE) */
+        div[data-testid="stPopover"] > button {{
+            background-color: transparent !important;
+            border: none !important;
+            box-shadow: none !important;
+            color: white !important;
+            font-size: 18px !important;
+            padding: 0px !important;
+            width: 38px !important;
+            height: 38px !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            transition: background-color 0.2s ease;
+        }}
+
+        div[data-testid="stPopover"] > button:hover {{
+            background-color: rgba(255, 255, 255, 0.15) !important;
+        }}
+
+        /* HIDE POPOVER DROPDOWN ARROW */
+        div[data-testid="stPopover"] > button svg {{
+            display: none !important;
+        }}
+
+        /* CUSTOM CIRCULAR AVATAR ICON */
+        .avatar-circle {{
+            width: 32px;
+            height: 32px;
+            background-color: #00838f;
+            color: white;
+            border-radius: 50%;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            padding-bottom: 10px;
-            margin-bottom: 10px;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 15px;
         }}
 
         /* SUN GLOW EFFECT */
@@ -210,21 +241,22 @@ def main():
     api_key = "96df70f062038652685b4a200ede92cc"
 
     # ==========================================
-    # SEPARATE HEADER ROW (NO OVERLAPPING)
+    # SEPARATE HEADER ROW (CHROME STYLE ICONS)
     # ==========================================
-    header_top_col1, header_top_col2, header_top_col3 = st.columns([8, 1, 1])
+    header_top_col1, header_top_col2, header_top_col3 = st.columns([8.5, 0.75, 0.75])
 
     with header_top_col1:
-        st.markdown("### 🌤️ **Weather Insights**")
+        st.markdown("### 🌤️️ **Weather Insights**")
 
-    # ICON 1: ACCOUNT AVATAR ICON
+    # ICON 1: CHROME STYLE ACCOUNT CIRCLE (A/G)
     with header_top_col2:
         if st.session_state.user_logged_in and st.session_state.logged_user_email:
             avatar_letter = st.session_state.logged_user_email[0].upper()
         else:
             avatar_letter = "G"
 
-        account_popover = st.popover(f"👤 {avatar_letter}")
+        # Display clean letter inside popover button
+        account_popover = st.popover(f"{avatar_letter}")
         
         with account_popover:
             st.markdown("#### **Account Settings**")
@@ -292,9 +324,9 @@ def main():
                     st.session_state.logged_user_email = ""
                     st.rerun()
 
-    # ICON 2: THREE DOTS MENU (⋮)
+    # ICON 2: CHROME STYLE THREE DOTS (⋮)
     with header_top_col3:
-        menu_popover = st.popover("⋮ Menu")
+        menu_popover = st.popover("⋮")
         with menu_popover:
             st.markdown("#### **Menu**")
             
@@ -400,7 +432,7 @@ def main():
 
         # ACTION BUTTON
         st.markdown("<br>", unsafe_allow_html=True)
-        run_pipeline_btn = st.button("Show Weather 🌤️", use_container_width=True)
+        run_pipeline_btn = st.button("Show Weather 🌤️️", use_container_width=True)
 
         # EXECUTION
         if run_pipeline_btn:
