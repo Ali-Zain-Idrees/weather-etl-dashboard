@@ -133,13 +133,11 @@ def welcome_auth_modal():
                 st.session_state.user_nickname = user_info.get("nickname", selected_email.split('@')[0])
                 st.session_state.auth_modal_shown = True
                 
-                # ONLY ADMIN GETS ADMIN PRIVILEGES
                 if selected_email.lower() in ["ali123@gmail.com", "admin@gmail.com"]:
                     st.session_state.is_admin = True
                 else:
                     st.session_state.is_admin = False
                     
-                st.toast(f"Welcome back, {st.session_state.user_nickname}!", icon="✅")
                 st.rerun()
         else:
             st.info("No saved accounts found. Please Sign Up or Continue as Guest.")
@@ -179,7 +177,6 @@ def welcome_auth_modal():
                 else:
                     st.session_state.is_admin = False
                     
-                st.success("Account registered successfully!")
                 st.rerun()
             else:
                 st.error("Please provide both email and password.")
@@ -278,58 +275,6 @@ def main():
             overflow-x: hidden;
         }}
 
-        /* Dynamic Day to Night Animation Background */
-        @keyframes dayNightCycle {{
-            0%   {{ background: linear-gradient(to bottom, #87CEEB, #E0F6FF); }}
-            25%  {{ background: linear-gradient(to bottom, #4A90E2, #50E3C2); }}
-            50%  {{ background: linear-gradient(to bottom, #FF7E5F, #FEB47B); }}
-            75%  {{ background: linear-gradient(to bottom, #0F2027, #203A43); }}
-            100% {{ background: linear-gradient(to bottom, #050505, #121826); }}
-        }}
-
-        /* Celestial Body Movement (Sun & Moon) */
-        .celestial-body {{
-            position: fixed;
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            top: 10%;
-            left: -80px;
-            animation: moveCelestial 30s infinite linear;
-            z-index: 0;
-            pointer-events: none;
-        }}
-
-        .sun {{
-            background: radial-gradient(circle, #FFF7AD, #FFA500);
-            box-shadow: 0 0 40px #FFA500, 0 0 80px #FF8C00;
-        }}
-
-        @keyframes moveCelestial {{
-            0%   {{ left: -10%; top: 30%; opacity: 1; }}
-            25%  {{ left: 25%; top: 5%; opacity: 1; }}
-            50%  {{ left: 50%; top: 2%; opacity: 1; }}
-            75%  {{ left: 80%; top: 25%; opacity: 0.8; }}
-            100% {{ left: 110%; top: 40%; opacity: 0; }}
-        }}
-
-        /* Rain Animation Effect */
-        .drop {{
-            position: fixed;
-            background: linear-gradient(transparent, rgba(255, 255, 255, 0.6));
-            width: 1.5px;
-            height: 30px;
-            opacity: 0.7;
-            animation: fall 0.6s linear infinite;
-            z-index: 0;
-            pointer-events: none;
-        }}
-
-        @keyframes fall {{
-            0%   {{ transform: translateY(-100px); }}
-            100% {{ transform: translateY(100vh); }}
-        }}
-
         {sidebar_css}
 
         /* MANAGE ACCOUNT & THREE DOTS GAP FIX (EXACTLY 15PX) */
@@ -338,59 +283,6 @@ def main():
             align-items: center;
             justify-content: flex-end;
             gap: 15px !important;
-        }}
-
-        /* HIDE DOWN ARROW FROM THREE DOTS POPOVER ONLY */
-        div[data-testid="stColumn"]:nth-of-type(2) div[data-testid="stPopover"]:nth-of-type(2) button svg {{
-            display: none !important;
-        }}
-
-        /* RESPONSIVE LARGE AVATAR CIRCLE & LINK STYLING */
-        .user-avatar-circle {{
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            background-color: {st.session_state.avatar_bg_color};
-            color: #ffffff;
-            font-size: 18px;
-            font-weight: bold;
-            margin-right: 8px;
-            box-shadow: 0px 2px 5px rgba(0,0,0,0.3);
-            text-transform: uppercase;
-            vertical-align: middle;
-        }}
-
-        /* Manage Account Text Link Styling (No Box / Dropdown Wrapper) */
-        .manage-account-link {{
-            background: none !important;
-            border: none !important;
-            color: #E0E0E0;
-            font-size: 15px;
-            font-weight: 500;
-            cursor: pointer;
-            text-decoration: none;
-            transition: all 0.2s ease-in-out;
-            display: inline-flex;
-            align-items: center;
-            padding: 0;
-        }}
-
-        .manage-account-link:hover {{
-            color: #4DA6FF !important;
-            font-weight: 700 !important;
-            text-decoration: underline;
-        }}
-
-        /* Bottom Right Manage App Button Visibility */
-        .manage-app-btn {{
-            display: block !important;
-            position: fixed;
-            bottom: 12px;
-            right: 12px;
-            z-index: 9999;
         }}
 
         /* WEATHER ICON COLOR STYLING */
@@ -429,7 +321,6 @@ def main():
     with header_col1:
         st.markdown('### <span class="weather-sun-icon">☀️</span>☁ **Weather Insights**', unsafe_allow_html=True)
 
-    # COMBINED MANAGE ACCOUNT & THREE DOTS WITH EXACT 15PX DISTANCE
     with header_col2:
         if st.session_state.user_logged_in and st.session_state.logged_user_email:
             avatar_letter = st.session_state.user_nickname[0].upper()
