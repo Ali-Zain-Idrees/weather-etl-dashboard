@@ -26,6 +26,7 @@ class WeatherDataModel(BaseModel):
 # 2. ETL PIPELINE & DATABASE FUNCTIONS
 # ==========================================
 def extract_weather_data(cities: list, api_key: str) -> list:
+    """Fetch raw weather JSON payloads from OpenWeatherMap API."""
     raw_data_list = []
     for city in cities:
         url = f"https://api.openweathermap.org/data/2.5/weather?q={city}&appid={api_key}"
@@ -41,6 +42,7 @@ def extract_weather_data(cities: list, api_key: str) -> list:
 
 
 def transform_and_validate_data(raw_data_list: list, user_name: str) -> pd.DataFrame:
+    """Validate JSON payload using Pydantic and transform Kelvin to Celsius."""
     validated_records = []
     current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
@@ -75,6 +77,7 @@ def transform_and_validate_data(raw_data_list: list, user_name: str) -> pd.DataF
 
 
 def load_data_to_storage(df: pd.DataFrame, db_name="weather_history.db", csv_name="cleaned_weather.csv"):
+    """Persist cleaned records to SQLite Database and CSV file."""
     if df.empty:
         return
 
@@ -89,6 +92,7 @@ def load_data_to_storage(df: pd.DataFrame, db_name="weather_history.db", csv_nam
 
 
 def fetch_historical_db_data(db_name="weather_history.db") -> pd.DataFrame:
+    """Fetch stored historical records from SQLite Database."""
     if not os.path.exists(db_name):
         return pd.DataFrame()
     conn = sqlite3.connect(db_name)
@@ -101,6 +105,7 @@ def fetch_historical_db_data(db_name="weather_history.db") -> pd.DataFrame:
 
 
 def delete_all_data_from_db(db_name="weather_history.db", csv_name="cleaned_weather.csv"):
+    """Permanently clear all database records from server."""
     if os.path.exists(db_name):
         conn = sqlite3.connect(db_name)
         cursor = conn.cursor()
@@ -151,7 +156,7 @@ def main():
         bg_style = "linear-gradient(to bottom, #09131d, #162436, #1d3557);"
         text_color = "#ffffff"
 
-    # --- ADVANCED OVERRIDE CSS FOR CHROME STYLE CIRCULAR ICONS ---
+    # --- CUSTOM STYLING FOR CHROME-LIKE BUTTONS ---
     st.markdown(f"""
         <style>
         .stApp {{
@@ -159,70 +164,44 @@ def main():
             color: {text_color};
         }}
 
-        /* REMOVE STREAMLIT POPOVER DEFAULT BOX & BORDERS */
-        div[data-testid="stPopover"] button {{
+        /* POPOVER BUTTON CUSTOMIZATION (CHROME STYLE) */
+        div[data-testid="stPopover"] > button {{
             background-color: transparent !important;
             border: none !important;
             box-shadow: none !important;
-            outline: none !important;
+            color: white !important;
+            font-size: 18px !important;
             padding: 0px !important;
-            margin: 0px !important;
-            min-height: 36px !important;
-            height: 36px !important;
-            width: 36px !important;
+            width: 38px !important;
+            height: 38px !important;
             border-radius: 50% !important;
             display: flex !important;
             align-items: center !important;
             justify-content: center !important;
-        }}
-
-        /* HIDE POPOVER DROPDOWN ARROW ICON (SVG) */
-        div[data-testid="stPopover"] button svg {{
-            display: none !important;
-            width: 0px !important;
-            height: 0px !important;
-        }}
-
-        /* CHROME STYLE AVATAR CIRCLE (G / A) */
-        .chrome-avatar {{
-            width: 34px;
-            height: 34px;
-            background-color: #00838f;
-            color: #ffffff;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 16px;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-            transition: transform 0.1s ease;
-        }}
-        .chrome-avatar:hover {{
-            filter: brightness(1.15);
-        }}
-
-        /* CHROME STYLE THREE DOTS (⋮) */
-        .chrome-dots {{
-            width: 34px;
-            height: 34px;
-            color: #e8eaed;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            font-weight: bold;
             transition: background-color 0.2s ease;
         }}
-        .chrome-dots:hover {{
-            background-color: rgba(255, 255, 255, 0.15);
+
+        div[data-testid="stPopover"] > button:hover {{
+            background-color: rgba(255, 255, 255, 0.15) !important;
         }}
 
-        /* CLOSE GAP BETWEEN COLUMNS */
-        div[data-testid="stColumn"] {{
-            padding: 0px 2px !important;
+        /* HIDE POPOVER DROPDOWN ARROW */
+        div[data-testid="stPopover"] > button svg {{
+            display: none !important;
+        }}
+
+        /* CUSTOM CIRCULAR AVATAR ICON */
+        .avatar-circle {{
+            width: 32px;
+            height: 32px;
+            background-color: #00838f;
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 15px;
         }}
 
         /* SUN GLOW EFFECT */
@@ -262,21 +241,22 @@ def main():
     api_key = "96df70f062038652685b4a200ede92cc"
 
     # ==========================================
-    # HEADER ROW (CLOSELY SPACED CHROME CIRCLES)
+    # SEPARATE HEADER ROW (CHROME STYLE ICONS)
     # ==========================================
-    header_top_col1, header_top_col2, header_top_col3 = st.columns([9.0, 0.5, 0.5])
+    header_top_col1, header_top_col2, header_top_col3 = st.columns([8.5, 0.75, 0.75])
 
     with header_top_col1:
         st.markdown("### 🌤 **Weather Insights**")
 
-    # ICON 1: CHROME CIRCULAR AVATAR
+    # ICON 1: CHROME STYLE ACCOUNT CIRCLE (A/G)
     with header_top_col2:
         if st.session_state.user_logged_in and st.session_state.logged_user_email:
             avatar_letter = st.session_state.logged_user_email[0].upper()
         else:
             avatar_letter = "G"
 
-        account_popover = st.popover(" ")
+        # Display clean letter inside popover button
+        account_popover = st.popover(f"{avatar_letter}")
         
         with account_popover:
             st.markdown("#### **Account Settings**")
@@ -344,24 +324,9 @@ def main():
                     st.session_state.logged_user_email = ""
                     st.rerun()
 
-        # OVERLAY CUSTOM CIRCLE INSIDE THE BUTTON
-        st.markdown(f"""
-            <script>
-            setTimeout(() => {{
-                let popovers = window.parent.document.querySelectorAll('div[data-testid="stPopover"] button');
-                if (popovers.length >= 1) {{
-                    popovers[0].innerHTML = '<div class="chrome-avatar">{avatar_letter}</div>';
-                }}
-                if (popovers.length >= 2) {{
-                    popovers[1].innerHTML = '<div class="chrome-dots">⋮</div>';
-                }}
-            }}, 100);
-            </script>
-        """, unsafe_allow_html=True)
-
-    # ICON 2: CHROME CIRCULAR THREE DOTS
+    # ICON 2: CHROME STYLE THREE DOTS (⋮)
     with header_top_col3:
-        menu_popover = st.popover("  ")
+        menu_popover = st.popover("⋮")
         with menu_popover:
             st.markdown("#### **Menu**")
             
